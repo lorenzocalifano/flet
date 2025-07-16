@@ -1,0 +1,10 @@
+# Ambiente virtuale Python
+venv/
+__pycache__/
+*.pyc
+
+# Config temporanei
+.DS_Store
+
+# Database SQLite (se non vuoi salvarlo)
+*.db
