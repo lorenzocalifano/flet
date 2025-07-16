@@ -22,6 +22,8 @@ def login_page(page: ft.Page):
             page.session.set("user_name", f"{user.nome} {user.cognome}")
             page.session.set("user_role", user.ruolo.value.upper())
 
+            page.window_maximized = True
+
             page.window_width = 1280
             page.window_height = 720
 
