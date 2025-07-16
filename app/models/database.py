@@ -3,7 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 # Database locale SQLite (file locale "app.db")
-DATABASE_URL = "sqlite:///app.db"
+DATABASE_URL = "sqlite:///gestione_magazzino.db"
 
 # Crea il motore di connessione
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})

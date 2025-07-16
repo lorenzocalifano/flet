@@ -3,9 +3,9 @@ from pydantic import BaseModel, EmailStr
 from enum import Enum
 
 class UserRole(str, Enum):
-    LAVORATORE = "lavoratore"
-    SEGRETERIA = "segreteria"
-    RESPONSABILE = "responsabile"
+    MAGAZZINIERE = "MAGAZZINIERE"
+    SEGRETERIA = "SEGRETERIA"
+    RESPONSABILE = "RESPONSABILE"
 
 class UserBase(BaseModel):
     nome: str

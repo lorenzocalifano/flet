@@ -1,9 +1,9 @@
-# Product model
-from sqlalchemy import Column, Integer, String, Float, Boolean
+from sqlalchemy import Column, Integer, String, Boolean
 from app.models.database import Base
 
 class Product(Base):
     __tablename__ = "products"
+    __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, index=True)
     nome = Column(String, nullable=False)
@@ -13,4 +13,4 @@ class Product(Base):
     potenza = Column(String, nullable=True)
     dimensione = Column(String, nullable=True)
     quantita = Column(Integer, nullable=False, default=0)
-    disponibile = Column(Boolean, default=True)
+    disponibile = Column(Boolean, default=True)  # importante per bloccare i danneggiati

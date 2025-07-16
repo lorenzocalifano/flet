@@ -1,12 +1,12 @@
 # Damage model
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, Date, ForeignKey
 from app.models.database import Base
-from datetime import datetime
 
-class Notification(Base):
-    __tablename__ = "notifications"
+class Damage(Base):
+    __tablename__ = "damages"
+    __table_args__ = {'extend_existing': True}  # utile in sviluppo per evitare conflitti
 
     id = Column(Integer, primary_key=True, index=True)
-    messaggio = Column(String, nullable=False)
-    data_creazione = Column(DateTime, default=datetime.utcnow)
-    letto = Column(Integer, default=0)  # 0 = non letto, 1 = letto
+    prodotto_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    descrizione = Column(String, nullable=False)
+    data_segnalazione = Column(Date, nullable=False)

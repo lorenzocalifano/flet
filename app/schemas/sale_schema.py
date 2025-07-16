@@ -2,12 +2,14 @@
 from pydantic import BaseModel
 from datetime import date
 
+
 class SaleBase(BaseModel):
     prodotto_id: int
     quantita: int
     cliente: str
     data_vendita: date
-    stato: str
+    stato: str = "confermato"
+    metodo_pagamento: str = "contanti"
 
 class SaleCreate(SaleBase):
     pass

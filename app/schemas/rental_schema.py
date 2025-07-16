@@ -8,7 +8,8 @@ class RentalBase(BaseModel):
     cliente: str
     data_inizio: date
     data_fine: date
-    stato: str
+    stato: str = "attivo"
+    metodo_pagamento: str = "contanti"  # ✅
 
 class RentalCreate(RentalBase):
     pass
