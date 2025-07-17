@@ -46,9 +46,23 @@ def rental_sale_page(page: ft.Page):
     def handle_save(e):
         try:
             if not prodotto_dropdown.value:
-                message_text.value = "Seleziona un prodotto."
+                message_text.value = "⚠️ Seleziona un prodotto."
+                message_text.color = "red"
                 page.update()
                 return
+
+            if not quantita_field.value.isdigit() or int(quantita_field.value) <= 0:
+                message_text.value = "⚠️ Inserisci una quantità valida."
+                message_text.color = "red"
+                page.update()
+                return
+
+            if tipo_operazione.value == "Noleggio" and not data_fine_field.value:
+                message_text.value = "⚠️ Inserisci la data fine per il noleggio!"
+                message_text.color = "red"
+                page.update()
+                return
+
             prodotto_id = int(prodotto_dropdown.value.split(" - ")[0])
             quantita = int(quantita_field.value)
             cliente = cliente_field.value.strip()
@@ -59,7 +73,7 @@ def rental_sale_page(page: ft.Page):
             disponibili = max(0, prodotto_corrente.quantita - danneggiati)
 
             if quantita > disponibili:
-                message_text.value = f"Disponibili solo {disponibili} pezzi."
+                message_text.value = f"⚠️ Disponibili solo {disponibili} pezzi."
                 message_text.color = "red"
                 db.close()
                 page.update()
@@ -71,7 +85,8 @@ def rental_sale_page(page: ft.Page):
                     quantita=quantita,
                     cliente=cliente,
                     data_inizio=date.fromisoformat(data_inizio_field.value),
-                    data_fine=date.fromisoformat(data_fine_field.value) if data_fine_field.value else date.today(),
+                    data_fine=date.fromisoformat(data_fine_field.value),
+                    stato="in corso",
                     metodo_pagamento=metodo_pagamento.value
                 ))
                 create_notification(db, f"Noleggio per {cliente}", tipo="noleggio", operazione_id=noleggio.id)
@@ -81,16 +96,17 @@ def rental_sale_page(page: ft.Page):
                     quantita=quantita,
                     cliente=cliente,
                     data_vendita=date.today(),
+                    stato="confermato",
                     metodo_pagamento=metodo_pagamento.value
                 ))
                 create_notification(db, f"Vendita a {cliente}", tipo="vendita", operazione_id=vendita.id)
 
             update_quantity(db, prodotto_id, max(0, prodotto_corrente.quantita - quantita))
             db.close()
-            message_text.value = f"{tipo_operazione.value} registrato!"
+            message_text.value = f"✅ {tipo_operazione.value} registrato con successo!"
             message_text.color = "green"
         except Exception as ex:
-            message_text.value = f"Errore: {str(ex)}"
+            message_text.value = f"❌ Errore: {str(ex)}"
             message_text.color = "red"
         page.update()
 
@@ -110,7 +126,8 @@ def rental_sale_page(page: ft.Page):
             ft.Row([
                 build_menu(page),
                 ft.Container(content=content, expand=True, bgcolor=ft.Colors.WHITE, padding=30, border_radius=15,
-                             shadow=ft.BoxShadow(spread_radius=1, blur_radius=8, color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK)))
+                             shadow=ft.BoxShadow(spread_radius=1, blur_radius=8,
+                                                 color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK)))
             ], expand=True)
         ]
     )

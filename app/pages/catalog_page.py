@@ -27,8 +27,7 @@ def catalog_page(page: ft.Page):
                         ft.Text(stato, size=14)
                     ]),
                     ft.ElevatedButton("Dettagli",
-                                      on_click=lambda e, pid=p.id: page.go(f"/product_detail?product_id={pid}"),
-                                      disabled=False)
+                                      on_click=lambda e, pid=p.id: page.go(f"/product_detail?product_id={pid}"))
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                 padding=10, bgcolor=colore, border_radius=10,
                 shadow=ft.BoxShadow(spread_radius=1, blur_radius=5,
@@ -46,8 +45,8 @@ def catalog_page(page: ft.Page):
     content = ft.Column([
         ft.Text("Catalogo Prodotti", size=30, weight=ft.FontWeight.BOLD),
         *buttons,
-        ft.Column(product_list, spacing=10, scroll=ft.ScrollMode.AUTO)
-    ], spacing=20)
+        ft.Column(product_list, spacing=10, scroll=ft.ScrollMode.AUTO, expand=True)
+    ], spacing=20, expand=True)
 
     return ft.View(
         route="/catalog",

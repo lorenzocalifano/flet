@@ -16,34 +16,44 @@ def history_page(page: ft.Page):
     operazioni = []
 
     for n in noleggi:
-        operazioni.append(ft.Container(
-            content=ft.Column([
-                ft.Text("NOLEGGIO", size=14, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE),
-                ft.Text(f"Cliente: {n.cliente}", size=12),
-                ft.Text(f"Prodotto ID: {n.prodotto_id}", size=12),
-                ft.Text(f"Quantità: {n.quantita}", size=12),
-                ft.Text(f"Metodo pagamento: {n.metodo_pagamento}", size=12),
-                ft.Text(f"Stato: {n.stato}", size=12),
-                ft.Text(f"Periodo: {n.data_inizio} → {n.data_fine}", size=12)
-            ], spacing=3),
-            padding=10, bgcolor=ft.Colors.WHITE, border_radius=10,
-            shadow=ft.BoxShadow(spread_radius=1, blur_radius=4, color=ft.Colors.with_opacity(0.2, ft.Colors.BLACK))
-        ))
+        operazioni.append(
+            ft.Container(
+                content=ft.Column([
+                    ft.Text("NOLEGGIO", size=14, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE),
+                    ft.Text(f"Cliente: {n.cliente}", size=12),
+                    ft.Text(f"Prodotto ID: {n.prodotto_id}", size=12),
+                    ft.Text(f"Quantità: {n.quantita}", size=12),
+                    ft.Text(f"Metodo pagamento: {n.metodo_pagamento}", size=12),
+                    ft.Text(f"Stato: {n.stato}", size=12),
+                    ft.Text(f"Periodo: {n.data_inizio} → {n.data_fine}", size=12)
+                ], spacing=3),
+                padding=10,
+                bgcolor=ft.Colors.WHITE,
+                border_radius=10,
+                shadow=ft.BoxShadow(spread_radius=1, blur_radius=4, color=ft.Colors.with_opacity(0.2, ft.Colors.BLACK)),
+                expand=True
+            )
+        )
 
     for v in vendite:
-        operazioni.append(ft.Container(
-            content=ft.Column([
-                ft.Text("VENDITA", size=14, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN),
-                ft.Text(f"Cliente: {v.cliente}", size=12),
-                ft.Text(f"Prodotto ID: {v.prodotto_id}", size=12),
-                ft.Text(f"Quantità: {v.quantita}", size=12),
-                ft.Text(f"Metodo pagamento: {v.metodo_pagamento}", size=12),
-                ft.Text(f"Stato: {v.stato}", size=12),
-                ft.Text(f"Data: {v.data_vendita}", size=12)
-            ], spacing=3),
-            padding=10, bgcolor=ft.Colors.WHITE, border_radius=10,
-            shadow=ft.BoxShadow(spread_radius=1, blur_radius=4, color=ft.Colors.with_opacity(0.2, ft.Colors.BLACK))
-        ))
+        operazioni.append(
+            ft.Container(
+                content=ft.Column([
+                    ft.Text("VENDITA", size=14, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN),
+                    ft.Text(f"Cliente: {v.cliente}", size=12),
+                    ft.Text(f"Prodotto ID: {v.prodotto_id}", size=12),
+                    ft.Text(f"Quantità: {v.quantita}", size=12),
+                    ft.Text(f"Metodo pagamento: {v.metodo_pagamento}", size=12),
+                    ft.Text(f"Stato: {v.stato}", size=12),
+                    ft.Text(f"Data: {v.data_vendita}", size=12)
+                ], spacing=3),
+                padding=10,
+                bgcolor=ft.Colors.WHITE,
+                border_radius=10,
+                shadow=ft.BoxShadow(spread_radius=1, blur_radius=4, color=ft.Colors.with_opacity(0.2, ft.Colors.BLACK)),
+                expand=True
+            )
+        )
 
     content = ft.Column([
         ft.Text("Storico Operazioni", size=30, weight=ft.FontWeight.BOLD),
@@ -56,8 +66,18 @@ def history_page(page: ft.Page):
         controls=[
             ft.Row([
                 build_menu(page),
-                ft.Container(content=content, expand=True, bgcolor=ft.Colors.WHITE, padding=30, border_radius=15,
-                             shadow=ft.BoxShadow(spread_radius=1, blur_radius=8, color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK)))
+                ft.Container(
+                    content=content,
+                    expand=True,
+                    bgcolor=ft.Colors.WHITE,
+                    padding=30,
+                    border_radius=15,
+                    shadow=ft.BoxShadow(
+                        spread_radius=1,
+                        blur_radius=8,
+                        color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK)
+                    )
+                )
             ], expand=True)
         ]
     )

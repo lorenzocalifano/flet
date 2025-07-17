@@ -12,40 +12,48 @@ def notification_detail_page(page: ft.Page):
     notification_id = int(page.query.get("notification_id"))
     db = SessionLocal()
     notifica = get_notification_by_id(db, notification_id)
-    if notifica and not notifica.letto:
-        mark_notification_as_read(db, notification_id)
 
     operazione_dettagli = []
-    if notifica and notifica.tipo == "noleggio":
+    if notifica.tipo == "noleggio":
         n = get_rental_by_id(db, notifica.operazione_id)
         if n:
             operazione_dettagli.extend([
                 ft.Text(f"Cliente: {n.cliente}", size=16),
+                ft.Text(f"Prodotto ID: {n.prodotto_id}", size=16),
                 ft.Text(f"Quantità: {n.quantita}", size=16),
                 ft.Text(f"Metodo pagamento: {n.metodo_pagamento}", size=16),
-                ft.Text(f"Data inizio: {n.data_inizio}", size=16),
-                ft.Text(f"Data fine: {n.data_fine}", size=16)
+                ft.Text(f"Periodo: {n.data_inizio} → {n.data_fine}", size=16),
+                ft.Text(f"Stato: {n.stato}", size=16)
             ])
-    elif notifica and notifica.tipo == "vendita":
+    elif notifica.tipo == "vendita":
         v = get_sale_by_id(db, notifica.operazione_id)
         if v:
             operazione_dettagli.extend([
                 ft.Text(f"Cliente: {v.cliente}", size=16),
+                ft.Text(f"Prodotto ID: {v.prodotto_id}", size=16),
                 ft.Text(f"Quantità: {v.quantita}", size=16),
                 ft.Text(f"Metodo pagamento: {v.metodo_pagamento}", size=16),
-                ft.Text(f"Data vendita: {v.data_vendita}", size=16)
+                ft.Text(f"Data vendita: {v.data_vendita}", size=16),
+                ft.Text(f"Stato: {v.stato}", size=16)
             ])
+
     db.close()
 
-    if not operazione_dettagli:
-        operazione_dettagli.append(ft.Text("Nessun dettaglio aggiuntivo", size=16))
+    def handle_mark_read(e):
+        db = SessionLocal()
+        mark_notification_as_read(db, notification_id)
+        db.close()
+        page.go("/notifications")
 
     content = ft.Column([
         ft.Text("Dettaglio Notifica", size=30, weight=ft.FontWeight.BOLD),
         ft.Text(f"Messaggio: {notifica.messaggio}", size=18),
         ft.Text(f"Data: {notifica.data_creazione}", size=16),
-        *operazione_dettagli,
-        ft.ElevatedButton("Torna alle Notifiche", on_click=lambda e: page.go("/notifications"), width=250)
+        *operazione_dettagli if operazione_dettagli else [ft.Text("Nessun dettaglio aggiuntivo", size=16)],
+        ft.Row([
+            ft.ElevatedButton("Segna come letta", on_click=handle_mark_read, width=200),
+            ft.ElevatedButton("Torna alle Notifiche", on_click=lambda e: page.go("/notifications"), width=200)
+        ], spacing=10)
     ], spacing=15)
 
     return ft.View(
@@ -54,8 +62,15 @@ def notification_detail_page(page: ft.Page):
         controls=[
             ft.Row([
                 build_menu(page),
-                ft.Container(content=content, expand=True, bgcolor=ft.colors.WHITE, padding=30, border_radius=15,
-                             shadow=ft.BoxShadow(spread_radius=1, blur_radius=8, color=ft.colors.with_opacity(0.25, ft.colors.BLACK)))
+                ft.Container(
+                    content=content,
+                    expand=True,
+                    bgcolor=ft.Colors.WHITE,
+                    padding=30,
+                    border_radius=15,
+                    shadow=ft.BoxShadow(spread_radius=1, blur_radius=8,
+                                        color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK))
+                )
             ], expand=True)
         ]
     )
