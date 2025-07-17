@@ -10,6 +10,7 @@ def hash_password(password: str) -> str:
     # Restituisce l'hash sicuro della password in chiaro
     return pwd_context.hash(password)
 
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     # Confronta una password in chiaro con il suo hash e verifica se corrispondono
     return pwd_context.verify(plain_password, hashed_password)

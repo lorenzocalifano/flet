@@ -7,5 +7,8 @@ __pycache__/
 # Config temporanei
 .DS_Store
 
-# Database SQLite (se non vuoi salvarlo)
+# Database SQLite
 *.db
+
+# FLET STORAGE
+storage/
