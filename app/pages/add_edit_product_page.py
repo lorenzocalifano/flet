@@ -15,15 +15,17 @@ def add_edit_product_page(page: ft.Page):
     # ✅ Leggiamo l'ID del prodotto dalla query
     product_id = page.query.get("product_id")
     prodotto = None
+    error_message = None
 
     if product_id:
         try:
             db = SessionLocal()
             prodotto = get_product_by_id(db, int(product_id))
             db.close()
+            if not prodotto:
+                error_message = f"❌ Prodotto con ID {product_id} non trovato!"
         except Exception as e:
-            print(f"Errore nel recupero prodotto: {e}")
-            prodotto = None
+            error_message = f"❌ Errore nel recupero del prodotto: {str(e)}"
 
     nome_field = ft.TextField(label="Nome", value=prodotto.nome if prodotto else "", width=300)
     categoria_field = ft.TextField(label="Categoria", value=prodotto.categoria if prodotto else "", width=300)
@@ -41,14 +43,14 @@ def add_edit_product_page(page: ft.Page):
         db = SessionLocal()
         try:
             if prodotto:
-                # ✅ Aggiornamento prodotto
+                # ✅ Aggiorniamo prodotto esistente
                 prodotto.nome = nome_field.value
                 prodotto.categoria = categoria_field.value
                 prodotto.quantita = int(quantita_field.value)
                 db.commit()
                 message_text.value = f"✅ Prodotto '{prodotto.nome}' aggiornato!"
             else:
-                # ✅ Nuovo prodotto
+                # ✅ Creiamo nuovo prodotto
                 nuovo = create_product(db, ProductCreate(
                     nome=nome_field.value,
                     categoria=categoria_field.value,
@@ -63,13 +65,24 @@ def add_edit_product_page(page: ft.Page):
             db.close()
         page.update()
 
-    content = ft.Column([
+    content_controls = [
         ft.Text("Aggiungi / Modifica Prodotto", size=30, weight=ft.FontWeight.BOLD),
-        nome_field, categoria_field, quantita_field,
-        ft.ElevatedButton("Salva", on_click=handle_save, width=250),
-        message_text,
+    ]
+
+    if error_message:
+        content_controls.append(ft.Text(error_message, size=16, color="red"))
+    else:
+        content_controls.extend([
+            nome_field, categoria_field, quantita_field,
+            ft.ElevatedButton("Salva", on_click=handle_save, width=250),
+            message_text
+        ])
+
+    content_controls.append(
         ft.ElevatedButton("⬅ Torna al Catalogo", on_click=lambda e: page.go("/catalog"), width=250)
-    ], spacing=15)
+    )
+
+    content = ft.Column(content_controls, spacing=15)
 
     return ft.View(
         route="/add_edit_product",

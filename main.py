@@ -93,7 +93,7 @@ def main(page: ft.Page):
             page.views.append(rental_sale_page(page))
         elif page.route == "/reset_password":
             page.views.append(reset_password_page(page))
-        elif page.route == "/add_edit_product":
+        elif page.route.startswith("/add_edit_product"):
             page.views.append(add_edit_product_page(page))
 
         page.update()
