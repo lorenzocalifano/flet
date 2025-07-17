@@ -36,8 +36,11 @@ def notification_detail_page(page: ft.Page):
                 ft.Text(f"Data vendita: {v.data_vendita}", size=16),
                 ft.Text(f"Stato: {v.stato}", size=16)
             ])
-
     db.close()
+
+    # ✅ Se non ci sono dettagli, aggiungiamo un messaggio generico
+    if not operazione_dettagli:
+        operazione_dettagli.append(ft.Text("Nessun dettaglio aggiuntivo", size=16))
 
     def handle_mark_read(e):
         db = SessionLocal()
@@ -49,7 +52,7 @@ def notification_detail_page(page: ft.Page):
         ft.Text("Dettaglio Notifica", size=30, weight=ft.FontWeight.BOLD),
         ft.Text(f"Messaggio: {notifica.messaggio}", size=18),
         ft.Text(f"Data: {notifica.data_creazione}", size=16),
-        *operazione_dettagli if operazione_dettagli else [ft.Text("Nessun dettaglio aggiuntivo", size=16)],
+        *operazione_dettagli,
         ft.Row([
             ft.ElevatedButton("Segna come letta", on_click=handle_mark_read, width=200),
             ft.ElevatedButton("Torna alle Notifiche", on_click=lambda e: page.go("/notifications"), width=200)
@@ -68,8 +71,11 @@ def notification_detail_page(page: ft.Page):
                     bgcolor=ft.Colors.WHITE,
                     padding=30,
                     border_radius=15,
-                    shadow=ft.BoxShadow(spread_radius=1, blur_radius=8,
-                                        color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK))
+                    shadow=ft.BoxShadow(
+                        spread_radius=1,
+                        blur_radius=8,
+                        color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK)
+                    )
                 )
             ], expand=True)
         ]
