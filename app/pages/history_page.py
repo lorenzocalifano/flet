@@ -3,6 +3,7 @@ from app.models.database import SessionLocal
 from app.services.rental_service import get_all_rentals
 from app.services.sale_service import get_all_sales
 from app.services.product_service import get_product_by_id
+from app.utils.menu_builder import build_menu
 
 def history_page(page: ft.Page):
     page.theme = ft.Theme(font_family="Montserrat")
@@ -16,16 +17,6 @@ def history_page(page: ft.Page):
     noleggi = get_all_rentals(db)
     vendite = get_all_sales(db)
     db.close()
-
-    menu_items = [
-        ft.ElevatedButton("Dashboard", on_click=lambda e: page.go("/dashboard")),
-        ft.ElevatedButton("Catalogo", on_click=lambda e: page.go("/catalog")),
-        ft.ElevatedButton("Storico", on_click=lambda e: page.go("/history")),
-        ft.ElevatedButton("Noleggi/Vendite", on_click=lambda e: page.go("/rental_sale")),
-        ft.ElevatedButton("Notifiche", on_click=lambda e: page.go("/notifications"))
-    ]
-    if page.session.get("user_role") == "RESPONSABILE":
-        menu_items.append(ft.ElevatedButton("Gestione Dipendenti", on_click=lambda e: page.go("/user_management")))
 
     operazioni_list = []
     db = SessionLocal()
@@ -73,7 +64,7 @@ def history_page(page: ft.Page):
         bgcolor="#1e90ff",
         controls=[
             ft.Row([
-                ft.Container(content=ft.Column(menu_items, spacing=10), width=220, bgcolor=ft.colors.BLUE_700, padding=15),
+                build_menu(page),
                 ft.Container(content=content, expand=True, bgcolor=ft.colors.WHITE, padding=30, border_radius=15,
                              shadow=ft.BoxShadow(spread_radius=1, blur_radius=8, color=ft.colors.with_opacity(0.25, ft.colors.BLACK)))
             ], expand=True)

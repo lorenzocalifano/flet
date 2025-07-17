@@ -29,59 +29,45 @@ def main(page: ft.Page):
     page.title = "Gestionale Magazzino"
     page.theme_mode = "light"
 
-    # ✅ Camuffiamo la barra nativa
-    page.window_title_bar_hidden = False  # (la lasciamo visibile per i controlli OS)
-    page.window_title_bar_buttons_hidden = True  # Nasconde i bottoni standard (opzionale)
-    page.window_bgcolor = ft.colors.BLUE_700  # Colore uguale allo sfondo dell'app
-    page.bgcolor = "#1e90ff"  # Sfondo coerente
+    # ✅ Login piccolo all'avvio
+    page.window_maximized = False
+    page.window_full_screen = False
+    page.window_width = 420
+    page.window_height = 520
+    page.window_resizable = True
+    page.window_bgcolor = ft.Colors.BLUE_700
+    page.bgcolor = "#1e90ff"
 
-    # ✅ All'avvio finestra piccola per il login
-    page.window_width = 400
-    page.window_height = 500
-
-    # ✅ Ricrea il database e crea utenti di test (solo in dev)
+    # ✅ Crea DB e utenti test
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
         if not db.query(User).first():
-            register_user(
-                db,
-                UserCreate(
-                    nome="Mario",
-                    cognome="Rossi",
-                    email="mario.rossi@test.com",
-                    password="123456",
-                    ruolo=UserRole.RESPONSABILE
-                )
-            )
-            register_user(
-                db,
-                UserCreate(
-                    nome="Luca",
-                    cognome="Bianchi",
-                    email="luca.bianchi@test.com",
-                    password="123456",
-                    ruolo=UserRole.SEGRETERIA
-                )
-            )
-            register_user(
-                db,
-                UserCreate(
-                    nome="Giulia",
-                    cognome="Verdi",
-                    email="giulia.verdi@test.com",
-                    password="123456",
-                    ruolo=UserRole.MAGAZZINIERE
-                )
-            )
+            register_user(db, UserCreate(nome="Mario", cognome="Rossi",
+                                         email="mario.rossi@test.com", password="123456",
+                                         ruolo=UserRole.RESPONSABILE))
+            register_user(db, UserCreate(nome="Luca", cognome="Bianchi",
+                                         email="luca.bianchi@test.com", password="123456",
+                                         ruolo=UserRole.SEGRETERIA))
+            register_user(db, UserCreate(nome="Giulia", cognome="Verdi",
+                                         email="giulia.verdi@test.com", password="123456",
+                                         ruolo=UserRole.MAGAZZINIERE))
             print("✅ Utenti di test creati!")
     finally:
         db.close()
 
     # noinspection PyUnreachableCode
+
     # ✅ Routing
     def route_change(e):
         page.views.clear()
+
+        # ✅ Se non siamo più nel login → massimizza
+        if page.route != "/":
+            page.window_maximized = True
+            page.window_full_screen = False  # evita modalità "iPad" su Mac
+            page.window_width = 1280
+            page.window_height = 720
 
         if page.route.startswith("/product_detail"):
             page.views.append(product_detail_page(page))

@@ -4,6 +4,7 @@ from app.services.product_service import get_all_products
 from app.services.damage_service import report_damage
 from app.schemas.damage_schema import DamageCreate
 from datetime import date
+from app.utils.menu_builder import build_menu
 
 def damage_report_page(page: ft.Page):
     page.theme = ft.Theme(font_family="Montserrat")
@@ -40,13 +41,6 @@ def damage_report_page(page: ft.Page):
         message_text.color = "green"
         page.update()
 
-    menu_items = [
-        ft.ElevatedButton("Dashboard", on_click=lambda e: page.go("/dashboard")),
-        ft.ElevatedButton("Catalogo", on_click=lambda e: page.go("/catalog")),
-        ft.ElevatedButton("Danni", on_click=lambda e: page.go("/damage_report")),
-        ft.ElevatedButton("Notifiche", on_click=lambda e: page.go("/notifications"))
-    ]
-
     content = ft.Column([
         ft.Text("Segnalazione Danni", size=30, weight=ft.FontWeight.BOLD),
         prodotto_dropdown, descrizione_field,
@@ -59,7 +53,7 @@ def damage_report_page(page: ft.Page):
         bgcolor="#1e90ff",
         controls=[
             ft.Row([
-                ft.Container(content=ft.Column(menu_items, spacing=10), width=220, bgcolor=ft.colors.BLUE_700, padding=15),
+                build_menu(page),
                 ft.Container(content=content, expand=True, bgcolor=ft.colors.WHITE, padding=30, border_radius=15,
                              shadow=ft.BoxShadow(spread_radius=1, blur_radius=8, color=ft.colors.with_opacity(0.25, ft.colors.BLACK)))
             ], expand=True)

@@ -1,4 +1,3 @@
-# Notification service
 from sqlalchemy.orm import Session
 from app.models.notification import Notification
 from datetime import datetime
@@ -19,18 +18,21 @@ def create_notification(db: Session, messaggio: str, tipo: str = None, operazion
 
 # ✅ 2. Ottieni tutte le notifiche
 def get_all_notifications(db: Session):
-    return db.query(Notification).all()
+    return db.query(Notification).order_by(Notification.data_creazione.desc()).all()
 
 # ✅ 3. Ottieni solo notifiche non lette
 def get_unread_notifications(db: Session):
     return db.query(Notification).filter(Notification.letto == 0).all()
 
-# ✅ 4. Segna una notifica come letta
-def mark_as_read(db: Session, notification_id: int):
+# ✅ 4. Segna una notifica come letta (compatibile con pagina dettaglio)
+def mark_notification_as_read(db: Session, notification_id: int):
     notifica = db.query(Notification).filter(Notification.id == notification_id).first()
-    if not notifica:
-        return None
-    notifica.letto = 1
-    db.commit()
-    db.refresh(notifica)
+    if notifica and notifica.letto == 0:
+        notifica.letto = 1
+        db.commit()
+        db.refresh(notifica)
     return notifica
+
+# ✅ 5. Ottieni una notifica per ID (necessario per pagina dettaglio)
+def get_notification_by_id(db: Session, notification_id: int):
+    return db.query(Notification).filter(Notification.id == notification_id).first()

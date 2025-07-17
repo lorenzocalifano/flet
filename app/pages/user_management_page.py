@@ -3,6 +3,7 @@ from app.models.database import SessionLocal
 from app.models.user import User
 from app.services.auth_service import register_user
 from app.schemas.user_schema import UserCreate, UserRole
+from app.utils.menu_builder import build_menu
 
 def user_management_page(page: ft.Page):
     page.theme = ft.Theme(font_family="Montserrat")
@@ -98,13 +99,6 @@ def user_management_page(page: ft.Page):
             )
         )
 
-    menu_items = [
-        ft.ElevatedButton("Dashboard", on_click=lambda e: page.go("/dashboard")),
-        ft.ElevatedButton("Catalogo", on_click=lambda e: page.go("/catalog")),
-        ft.ElevatedButton("Gestione Dipendenti", on_click=lambda e: page.go("/user_management")),
-        ft.ElevatedButton("Notifiche", on_click=lambda e: page.go("/notifications"))
-    ]
-
     content = ft.Column([
         ft.Text("Gestione Dipendenti", size=30, weight=ft.FontWeight.BOLD),
         ft.Row([nome_field, cognome_field], spacing=10),
@@ -120,7 +114,7 @@ def user_management_page(page: ft.Page):
         bgcolor="#1e90ff",
         controls=[
             ft.Row([
-                ft.Container(content=ft.Column(menu_items, spacing=10), width=220, bgcolor=ft.colors.BLUE_700, padding=15),
+                build_menu(page),
                 ft.Container(content=content, expand=True, bgcolor=ft.colors.WHITE, padding=30, border_radius=15,
                              shadow=ft.BoxShadow(spread_radius=1, blur_radius=8, color=ft.colors.with_opacity(0.25, ft.colors.BLACK)))
             ], expand=True)

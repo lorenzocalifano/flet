@@ -2,6 +2,7 @@ import flet as ft
 from app.models.database import SessionLocal
 from app.services.product_service import get_all_products
 from app.services.damage_service import count_damages_for_product
+from app.utils.menu_builder import build_menu
 
 def catalog_page(page: ft.Page):
     page.theme = ft.Theme(font_family="Montserrat")
@@ -10,21 +11,6 @@ def catalog_page(page: ft.Page):
     db = SessionLocal()
     prodotti = get_all_products(db)
     db.close()
-
-    user_role = page.session.get("user_role") or "MAGAZZINIERE"
-
-    menu_items = [
-        ft.ElevatedButton("Dashboard", on_click=lambda e: page.go("/dashboard")),
-        ft.ElevatedButton("Catalogo", on_click=lambda e: page.go("/catalog")),
-        ft.ElevatedButton("Notifiche", on_click=lambda e: page.go("/notifications"))
-    ]
-    if user_role in ["RESPONSABILE", "SEGRETERIA"]:
-        menu_items.append(ft.ElevatedButton("Storico", on_click=lambda e: page.go("/history")))
-        menu_items.append(ft.ElevatedButton("Noleggi/Vendite", on_click=lambda e: page.go("/rental_sale")))
-    if user_role == "RESPONSABILE":
-        menu_items.append(ft.ElevatedButton("Gestione Dipendenti", on_click=lambda e: page.go("/user_management")))
-    if user_role in ["RESPONSABILE", "MAGAZZINIERE"]:
-        menu_items.append(ft.ElevatedButton("Danni", on_click=lambda e: page.go("/damage_report")))
 
     product_list = []
     db = SessionLocal()
@@ -49,15 +35,17 @@ def catalog_page(page: ft.Page):
         )
     db.close()
 
-    content = ft.Column([ft.Text("Catalogo Prodotti", size=30, weight=ft.FontWeight.BOLD),
-                         ft.Column(product_list, spacing=10, scroll=ft.ScrollMode.AUTO)], spacing=20)
+    content = ft.Column([
+        ft.Text("Catalogo Prodotti", size=30, weight=ft.FontWeight.BOLD),
+        ft.Column(product_list, spacing=10, scroll=ft.ScrollMode.AUTO)
+    ], spacing=20)
 
     return ft.View(
         route="/catalog",
         bgcolor="#1e90ff",
         controls=[
             ft.Row([
-                ft.Container(content=ft.Column(menu_items, spacing=10), width=220, bgcolor=ft.colors.BLUE_700, padding=15),
+                build_menu(page),
                 ft.Container(content=content, expand=True, bgcolor=ft.colors.WHITE, padding=30, border_radius=15,
                              shadow=ft.BoxShadow(spread_radius=1, blur_radius=8, color=ft.colors.with_opacity(0.25, ft.colors.BLACK)))
             ], expand=True)

@@ -8,6 +8,7 @@ from app.services.notification_service import create_notification
 from app.services.damage_service import count_damages_for_product
 from app.schemas.rental_schema import RentalCreate
 from app.schemas.sale_schema import SaleCreate
+from app.utils.menu_builder import build_menu
 
 def rental_sale_page(page: ft.Page):
     page.theme = ft.Theme(font_family="Montserrat")
@@ -93,16 +94,6 @@ def rental_sale_page(page: ft.Page):
             message_text.color = "red"
         page.update()
 
-    menu_items = [
-        ft.ElevatedButton("Dashboard", on_click=lambda e: page.go("/dashboard")),
-        ft.ElevatedButton("Catalogo", on_click=lambda e: page.go("/catalog")),
-        ft.ElevatedButton("Noleggi/Vendite", on_click=lambda e: page.go("/rental_sale")),
-        ft.ElevatedButton("Storico", on_click=lambda e: page.go("/history")),
-        ft.ElevatedButton("Notifiche", on_click=lambda e: page.go("/notifications"))
-    ]
-    if page.session.get("user_role") == "RESPONSABILE":
-        menu_items.append(ft.ElevatedButton("Gestione Dipendenti", on_click=lambda e: page.go("/user_management")))
-
     content = ft.Column([
         ft.Text("Registra Noleggio / Vendita", size=30, weight=ft.FontWeight.BOLD),
         tipo_operazione, prodotto_dropdown, quantita_field, cliente_field,
@@ -116,9 +107,9 @@ def rental_sale_page(page: ft.Page):
         bgcolor="#1e90ff",
         controls=[
             ft.Row([
-                ft.Container(content=ft.Column(menu_items, spacing=10), width=220, bgcolor=ft.colors.BLUE_700, padding=15),
-                ft.Container(content=content, expand=True, bgcolor=ft.colors.WHITE, padding=30, border_radius=15,
-                             shadow=ft.BoxShadow(spread_radius=1, blur_radius=8, color=ft.colors.with_opacity(0.25, ft.colors.BLACK)))
+                build_menu(page),
+                ft.Container(content=content, expand=True, bgcolor=ft.Colors.WHITE, padding=30, border_radius=15,
+                             shadow=ft.BoxShadow(spread_radius=1, blur_radius=8, color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK)))
             ], expand=True)
         ]
     )

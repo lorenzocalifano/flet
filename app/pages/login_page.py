@@ -17,15 +17,15 @@ def login_page(page: ft.Page):
         db.close()
 
         if user:
-            message_text.value = ""
             page.session.set("user_id", user.id)
             page.session.set("user_name", f"{user.nome} {user.cognome}")
             page.session.set("user_role", user.ruolo.value.upper())
 
+            # Massimizza veramente a schermo intero
             page.window_maximized = True
+            page.window_full_screen = True  # <-- AGGIUNTO ORA
 
-            page.window_width = 1280
-            page.window_height = 720
+            page.go("/dashboard")
 
             page.go("/dashboard")
         else:
