@@ -29,9 +29,10 @@ def notifications_page(page: ft.Page):
                         on_click=lambda e, nid=n.id: page.go(f"/notification_detail?notification_id={nid}")
                     )
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                padding=10, bgcolor=ft.Colors.WHITE, border_radius=10,
-                shadow=ft.BoxShadow(spread_radius=1, blur_radius=5,
-                                    color=ft.Colors.with_opacity(0.2, ft.Colors.BLACK))
+                padding=15,
+                bgcolor=ft.Colors.WHITE,
+                border_radius=10,
+                shadow=ft.BoxShadow(spread_radius=1, blur_radius=5, color=ft.Colors.with_opacity(0.2, ft.Colors.BLACK))
             )
         )
 
@@ -52,8 +53,11 @@ def notifications_page(page: ft.Page):
                     bgcolor=ft.Colors.WHITE,
                     padding=30,
                     border_radius=15,
-                    shadow=ft.BoxShadow(spread_radius=1, blur_radius=8,
-                                        color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK))
+                    shadow=ft.BoxShadow(
+                        spread_radius=1,
+                        blur_radius=8,
+                        color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK)
+                    )
                 )
             ], expand=True)
         ]
