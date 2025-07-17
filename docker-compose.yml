@@ -1,0 +1,11 @@
+version: "3.9"
+
+services:
+  gestionale:
+    build: .
+    container_name: gestionale_magazzino
+    ports:
+      - "8550:8550"
+    volumes:
+      - .:/app
+    restart: unless-stopped

@@ -1,14 +1,32 @@
-# Ambiente virtuale Python
-venv/
+# python
 __pycache__/
 *.pyc
-.idea/
+*.pyo
+*.pyd
+
+# venv
+venv/
+.env
+
+# SQLite DB
+*.db
+*.db-shm
+*.db-wal
+
+# docker
+# cache e dati temporanei docker
+*.pid
+*.log
+*.tar
+*.sock
+.docker/
+docker-compose.override.yml
+
+# Docker volumes e cache
+storage/
+data/
+temp/
+.cache/
 
 # Config temporanei
 .DS_Store
-
-# Database SQLite
-*.db
-
-# Flet Storage
-storage/
