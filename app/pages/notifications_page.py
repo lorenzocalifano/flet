@@ -2,6 +2,7 @@ import flet as ft
 from app.models.database import SessionLocal
 from app.services.notification_service import get_all_notifications
 from app.utils.menu_builder import build_menu
+from app.utils.header_builder import build_header
 
 def notifications_page(page: ft.Page):
     page.theme = ft.Theme(font_family="Montserrat")
@@ -13,7 +14,7 @@ def notifications_page(page: ft.Page):
 
     notifiche_list = []
     for n in notifiche:
-        stato = "Letta ✅" if n.letto else "Non letta 🔔"
+        stato = "✅ Letta" if n.letto else "🔔 Non letta"
         color = ft.Colors.GREEN if n.letto else ft.Colors.AMBER
 
         notifiche_list.append(
@@ -30,20 +31,19 @@ def notifications_page(page: ft.Page):
                     )
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                 padding=15,
-                bgcolor=ft.Colors.WHITE,
-                border_radius=10,
-                shadow=ft.BoxShadow(spread_radius=1, blur_radius=5, color=ft.Colors.with_opacity(0.2, ft.Colors.BLACK))
+                bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.GREY),
+                border_radius=8
             )
         )
 
     content = ft.Column([
-        ft.Text("Notifiche", size=30, weight=ft.FontWeight.BOLD),
+        build_header(page, "Notifiche"),
         ft.Column(notifiche_list, spacing=10, scroll=ft.ScrollMode.AUTO, expand=True)
     ], spacing=20, expand=True)
 
     return ft.View(
         route="/notifications",
-        bgcolor="#1e90ff",
+        bgcolor="#f5f5f5",
         controls=[
             ft.Row([
                 build_menu(page),

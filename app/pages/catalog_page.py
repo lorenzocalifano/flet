@@ -3,6 +3,7 @@ from app.models.database import SessionLocal
 from app.services.product_service import get_all_products
 from app.services.damage_service import count_damages_for_product
 from app.utils.menu_builder import build_menu
+from app.utils.header_builder import build_header
 
 def catalog_page(page: ft.Page):
     page.theme = ft.Theme(font_family="Montserrat")
@@ -12,7 +13,6 @@ def catalog_page(page: ft.Page):
     prodotti = get_all_products(db)
     db.close()
 
-    # ✅ Opzioni filtri
     categorie = sorted({p.categoria for p in prodotti if p.categoria})
     modelli = sorted({p.modello for p in prodotti if p.modello})
     dimensioni = sorted({p.dimensione for p in prodotti if p.dimensione})
@@ -51,36 +51,39 @@ def catalog_page(page: ft.Page):
                     content=ft.Row([
                         ft.Column([
                             ft.Text(f"{p.nome} ({p.categoria})", size=16, weight=ft.FontWeight.BOLD),
-                            ft.Text(f"Modello: {p.modello or 'N/A'} | Dimensione: {p.dimensione or 'N/A'} | Brand: {p.brand or 'N/A'}", size=12, italic=True),
+                            ft.Text(
+                                f"Modello: {p.modello or 'N/A'} | Dimensione: {p.dimensione or 'N/A'} | Brand: {p.brand or 'N/A'}",
+                                size=12, italic=True),
                             ft.Text(stato, size=14)
                         ], expand=True),
-                        ft.ElevatedButton("Dettagli", on_click=lambda e, pid=p.id: page.go(f"/product_detail?product_id={pid}"))
+                        ft.ElevatedButton("Dettagli",
+                                          on_click=lambda e, pid=p.id: page.go(f"/product_detail?product_id={pid}"))
                     ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                     padding=10,
                     bgcolor=color,
                     border_radius=10,
-                    shadow=ft.BoxShadow(spread_radius=1, blur_radius=5, color=ft.Colors.with_opacity(0.2, ft.Colors.BLACK))
+                    shadow=ft.BoxShadow(spread_radius=1, blur_radius=5,
+                                        color=ft.Colors.with_opacity(0.2, ft.Colors.BLACK))
                 )
             )
         page.update()
 
-    # ✅ Collegamento eventi filtri
     for f in [categoria_filter, modello_filter, dimensione_filter, brand_filter]:
         f.on_change = refresh_list
 
     refresh_list()
 
-    # ✅ Floating button
     floating_button = None
     if page.session.get("user_role") in ["RESPONSABILE", "MAGAZZINIERE"]:
         floating_button = ft.Container(
-            content=ft.FloatingActionButton(icon=ft.Icons.ADD, bgcolor=ft.Colors.BLUE, on_click=lambda e: page.go("/add_edit_product")),
+            content=ft.FloatingActionButton(icon=ft.Icons.ADD, bgcolor=ft.Colors.BLUE,
+                                            on_click=lambda e: page.go("/add_edit_product")),
             right=30, bottom=30
         )
 
     content = ft.Stack([
         ft.Column([
-            ft.Text("Catalogo Prodotti", size=30, weight=ft.FontWeight.BOLD),
+            build_header(page, "Catalogo Prodotti"),
             ft.Row([categoria_filter, modello_filter, dimensione_filter, brand_filter], spacing=10),
             product_list_column
         ], spacing=20, expand=True),
@@ -89,7 +92,7 @@ def catalog_page(page: ft.Page):
 
     return ft.View(
         route="/catalog",
-        bgcolor="#1e90ff",
+        bgcolor="#f0f8ff",  # azzurro tenue per distinguere
         controls=[
             ft.Row([
                 build_menu(page),
@@ -99,7 +102,8 @@ def catalog_page(page: ft.Page):
                     bgcolor=ft.Colors.WHITE,
                     padding=30,
                     border_radius=15,
-                    shadow=ft.BoxShadow(spread_radius=1, blur_radius=8, color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK))
+                    shadow=ft.BoxShadow(spread_radius=1, blur_radius=8,
+                                        color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK))
                 )
             ], expand=True)
         ]

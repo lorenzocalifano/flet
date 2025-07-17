@@ -3,6 +3,7 @@ from app.models.database import SessionLocal
 from app.services.rental_service import get_all_rentals
 from app.services.sale_service import get_all_sales
 from app.utils.menu_builder import build_menu
+from app.utils.header_builder import build_header
 
 def history_page(page: ft.Page):
     page.theme = ft.Theme(font_family="Montserrat")
@@ -13,47 +14,104 @@ def history_page(page: ft.Page):
     vendite = get_all_sales(db)
     db.close()
 
-    operazioni = []
+    tipo_operazione = ft.Dropdown(
+        label="Tipo Operazione",
+        options=[
+            ft.dropdown.Option("Noleggi"),
+            ft.dropdown.Option("Vendite")
+        ],
+        value="Noleggi",
+        width=200
+    )
 
-    def build_card(titolo, colore, dettagli):
+    ordine_data = ft.Dropdown(
+        label="Ordina per data",
+        options=[
+            ft.dropdown.Option("Più recenti prima"),
+            ft.dropdown.Option("Meno recenti prima")
+        ],
+        value="Più recenti prima",
+        width=200
+    )
+
+    ricerca_cliente = ft.TextField(label="Cerca per cliente", width=250)
+
+    operazioni_column = ft.Column(
+        spacing=10,
+        scroll=ft.ScrollMode.AUTO,
+        expand=True,
+        alignment=ft.MainAxisAlignment.START,
+        horizontal_alignment=ft.CrossAxisAlignment.STRETCH  # ✅ CARDS FULL WIDTH
+    )
+
+    def build_card(colore, dettagli):
         return ft.Container(
-            content=ft.Column(dettagli, spacing=5, expand=True),
+            content=ft.Column(dettagli, spacing=5),
             padding=15,
-            bgcolor=ft.Colors.with_opacity(0.05, colore),
+            bgcolor=ft.Colors.with_opacity(0.08, colore),
             border_radius=10,
-            expand=True
         )
 
-    for n in noleggi:
-        operazioni.append(build_card("NOLEGGIO", ft.Colors.BLUE, [
-            ft.Text("NOLEGGIO", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE),
-            ft.Text(f"Cliente: {n.cliente}", size=14),
-            ft.Text(f"Prodotto ID: {n.prodotto_id}", size=14),
-            ft.Text(f"Quantità: {n.quantita}", size=14),
-            ft.Text(f"Metodo pagamento: {n.metodo_pagamento}", size=14),
-            ft.Text(f"Stato: {n.stato}", size=14),
-            ft.Text(f"Periodo: {n.data_inizio} → {n.data_fine}", size=14)
-        ]))
+    def refresh_list(e=None):
+        operazioni_column.controls.clear()
 
-    for v in vendite:
-        operazioni.append(build_card("VENDITA", ft.Colors.GREEN, [
-            ft.Text("VENDITA", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN),
-            ft.Text(f"Cliente: {v.cliente}", size=14),
-            ft.Text(f"Prodotto ID: {v.prodotto_id}", size=14),
-            ft.Text(f"Quantità: {v.quantita}", size=14),
-            ft.Text(f"Metodo pagamento: {v.metodo_pagamento}", size=14),
-            ft.Text(f"Stato: {v.stato}", size=14),
-            ft.Text(f"Data: {v.data_vendita}", size=14)
-        ]))
+        if tipo_operazione.value == "Noleggi":
+            operazioni = sorted(
+                noleggi,
+                key=lambda n: n.data_inizio,
+                reverse=True if ordine_data.value == "Più recenti prima" else False
+            )
+            for n in operazioni:
+                if ricerca_cliente.value and ricerca_cliente.value.lower() not in n.cliente.lower():
+                    continue
+                operazioni_column.controls.append(
+                    build_card(ft.Colors.BLUE, [
+                        ft.Text("NOLEGGIO", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE),
+                        ft.Text(f"Cliente: {n.cliente}", size=14),
+                        ft.Text(f"Prodotto ID: {n.prodotto_id}", size=14),
+                        ft.Text(f"Quantità: {n.quantita}", size=14),
+                        ft.Text(f"Metodo pagamento: {n.metodo_pagamento}", size=14),
+                        ft.Text(f"Stato: {n.stato}", size=14),
+                        ft.Text(f"Periodo: {n.data_inizio} → {n.data_fine}", size=14)
+                    ])
+                )
+        else:
+            operazioni = sorted(
+                vendite,
+                key=lambda v: v.data_vendita,
+                reverse=True if ordine_data.value == "Più recenti prima" else False
+            )
+            for v in operazioni:
+                if ricerca_cliente.value and ricerca_cliente.value.lower() not in v.cliente.lower():
+                    continue
+                operazioni_column.controls.append(
+                    build_card(ft.Colors.GREEN, [
+                        ft.Text("VENDITA", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN),
+                        ft.Text(f"Cliente: {v.cliente}", size=14),
+                        ft.Text(f"Prodotto ID: {v.prodotto_id}", size=14),
+                        ft.Text(f"Quantità: {v.quantita}", size=14),
+                        ft.Text(f"Metodo pagamento: {v.metodo_pagamento}", size=14),
+                        ft.Text(f"Stato: {v.stato}", size=14),
+                        ft.Text(f"Data: {v.data_vendita}", size=14)
+                    ])
+                )
+        page.update()
+
+    tipo_operazione.on_change = refresh_list
+    ordine_data.on_change = refresh_list
+    ricerca_cliente.on_change = refresh_list
+
+    refresh_list()
 
     content = ft.Column([
-        ft.Text("Storico Operazioni", size=30, weight=ft.FontWeight.BOLD),
-        ft.ListView(controls=operazioni, spacing=12, expand=True)
+        build_header(page, "Storico Operazioni"),
+        ft.Row([tipo_operazione, ordine_data, ricerca_cliente], spacing=15),
+        operazioni_column
     ], spacing=20, expand=True)
 
     return ft.View(
         route="/history",
-        bgcolor="#1e90ff",
+        bgcolor="#f5f5f5",
         controls=[
             ft.Row([
                 build_menu(page),

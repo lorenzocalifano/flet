@@ -2,8 +2,8 @@ import flet as ft
 
 def build_header(page: ft.Page, titolo: str):
     """Header standard con titolo, utente e logout."""
-    user_name = page.session.get("user_name", "Utente")
-    user_role = page.session.get("user_role", "N/A")
+    user_name = page.session.get("user_name") or "Utente"
+    user_role = page.session.get("user_role") or "N/A"
 
     return ft.Row(
         [

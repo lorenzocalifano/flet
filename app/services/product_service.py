@@ -29,3 +29,15 @@ def update_quantity(db: Session, product_id: int, new_quantity: int):
         db.commit()
         db.refresh(prodotto)
     return prodotto
+
+def update_product_quantity(db: Session, product_id: int, quantity_change: int):
+    """
+    Aggiorna la quantità di un prodotto (aggiunge o toglie quantità).
+    Esempio: quantity_change = -3 per togliere 3 pezzi.
+    """
+    prodotto = db.query(Product).filter(Product.id == product_id).first()
+    if prodotto:
+        prodotto.quantita = max(0, prodotto.quantita + quantity_change)
+        db.commit()
+        db.refresh(prodotto)
+    return prodotto

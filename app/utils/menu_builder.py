@@ -3,8 +3,8 @@ from app.models.database import SessionLocal
 from app.services.notification_service import get_unread_notifications
 
 def build_menu(page: ft.Page):
-    user_name = page.session.get("user_name", "Utente")
-    user_role = page.session.get("user_role", "N/A")
+    user_name = page.session.get("user_name") or "Utente"
+    user_role = page.session.get("user_role") or "N/A"
 
     # ✅ Conta notifiche non lette
     db = SessionLocal()
@@ -22,10 +22,7 @@ def build_menu(page: ft.Page):
     buttons = [
         ft.ElevatedButton("Dashboard", on_click=lambda e: page.go("/dashboard")),
         ft.ElevatedButton("Catalogo", on_click=lambda e: page.go("/catalog")),
-        ft.Row([
-            ft.ElevatedButton("Notifiche", on_click=lambda e: page.go("/notifications")),
-            badge
-        ]),
+        ft.Row([ft.ElevatedButton("Notifiche", on_click=lambda e: page.go("/notifications")), badge]),
         ft.ElevatedButton("Storico", on_click=lambda e: page.go("/history")),
     ]
 

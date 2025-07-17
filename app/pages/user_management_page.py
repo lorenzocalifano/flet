@@ -1,9 +1,9 @@
 import flet as ft
 from app.models.database import SessionLocal
-from app.models.user import User
-from app.services.auth_service import register_user
+from app.services.user_service import get_all_users, delete_user, update_user_role, create_user
 from app.schemas.user_schema import UserCreate, UserRole
 from app.utils.menu_builder import build_menu
+from app.utils.header_builder import build_header
 
 def user_management_page(page: ft.Page):
     page.theme = ft.Theme(font_family="Montserrat")
@@ -14,109 +14,127 @@ def user_management_page(page: ft.Page):
         return
 
     db = SessionLocal()
-    utenti = db.query(User).all()
+    utenti = get_all_users(db)
     db.close()
 
     nome_field = ft.TextField(label="Nome", width=200)
     cognome_field = ft.TextField(label="Cognome", width=200)
     email_field = ft.TextField(label="Email", width=200)
-    password_field = ft.TextField(label="Password", password=True, width=200)
+    password_field = ft.TextField(label="Password", password=True, can_reveal_password=True, width=200)
     ruolo_dropdown = ft.Dropdown(
         label="Ruolo",
-        options=[
-            ft.dropdown.Option("RESPONSABILE"),
-            ft.dropdown.Option("SEGRETERIA"),
-            ft.dropdown.Option("MAGAZZINIERE")
-        ],
-        value="MAGAZZINIERE", width=200
+        options=[ft.dropdown.Option(r.name) for r in UserRole],
+        width=200
     )
-    message_text = ft.Text("", size=16, color="green")
+    message_text = ft.Text("", size=14, color="green")
+
+    user_list_column = ft.Column(spacing=10, scroll=ft.ScrollMode.AUTO, expand=True)
+
+    def refresh_list():
+        db = SessionLocal()
+        utenti = get_all_users(db)
+        db.close()
+        user_list_column.controls.clear()
+
+        for u in utenti:
+            role_dropdown = ft.Dropdown(
+                value=u.ruolo.name,
+                options=[ft.dropdown.Option(r.name) for r in UserRole],
+                width=150,
+                on_change=lambda e, uid=u.id: update_role(uid, e.control.value)
+            )
+            delete_btn = ft.IconButton(
+                icon=ft.Icons.DELETE,
+                icon_color=ft.Colors.RED,
+                on_click=lambda e, uid=u.id: handle_delete(uid)
+            )
+            user_list_column.controls.append(
+                ft.Container(
+                    content=ft.Row([
+                        ft.Column([
+                            ft.Text(f"{u.nome} {u.cognome}", size=14, weight=ft.FontWeight.BOLD),
+                            ft.Text(f"Email: {u.email}", size=12, italic=True)
+                        ], expand=True),
+                        role_dropdown,
+                        delete_btn
+                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                    padding=10,
+                    bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.GREY),
+                    border_radius=8
+                )
+            )
+        page.update()
 
     def handle_add(e):
-        if not email_field.value or not password_field.value:
-            message_text.value = "Email e password obbligatorie!"
+        if not nome_field.value or not cognome_field.value or not email_field.value or not password_field.value or not ruolo_dropdown.value:
+            message_text.value = "⚠️ Tutti i campi sono obbligatori!"
             message_text.color = "red"
-            page.update()
-            return
-        db = SessionLocal()
-        register_user(
-            db,
-            UserCreate(
-                nome=nome_field.value,
-                cognome=cognome_field.value,
-                email=email_field.value,
-                password=password_field.value,
-                ruolo=UserRole[ruolo_dropdown.value]
-            )
-        )
-        db.close()
-        message_text.value = f"✅ Dipendente {nome_field.value} aggiunto!"
-        message_text.color = "green"
-        page.go("/user_management")
+        else:
+            db = SessionLocal()
+            try:
+                create_user(db, UserCreate(
+                    nome=nome_field.value,
+                    cognome=cognome_field.value,
+                    email=email_field.value,
+                    password=password_field.value,
+                    ruolo=UserRole[ruolo_dropdown.value]
+                ))
+                message_text.value = f"✅ Dipendente {nome_field.value} aggiunto!"
+                message_text.color = "green"
+                refresh_list()
+            except Exception as ex:
+                message_text.value = f"❌ Errore: {str(ex)}"
+                message_text.color = "red"
+            finally:
+                db.close()
+        page.update()
 
-    def handle_delete(e, user_id):
+    def handle_delete(user_id):
         db = SessionLocal()
-        db.query(User).filter(User.id == user_id).delete()
-        db.commit()
-        db.close()
-        page.go("/user_management")
+        try:
+            delete_user(db, user_id)
+            refresh_list()
+        finally:
+            db.close()
 
-    def handle_change_role(e, user_id, new_role):
+    def update_role(user_id, new_role):
         db = SessionLocal()
-        utente = db.query(User).filter(User.id == user_id).first()
-        if utente:
-            utente.ruolo = UserRole[new_role]
-            db.commit()
-        db.close()
-        page.go("/user_management")
+        try:
+            update_user_role(db, user_id, UserRole[new_role])
+            refresh_list()
+        finally:
+            db.close()
 
-    user_list = []
-    for u in utenti:
-        if u.email == "mario.rossi@test.com":
-            continue
-        user_list.append(
-            ft.Container(
-                content=ft.Row([
-                    ft.Column([
-                        ft.Text(f"{u.nome} {u.cognome}", size=16, weight=ft.FontWeight.BOLD),
-                        ft.Text(f"Email: {u.email}", size=14),
-                        ft.Text(f"Ruolo: {u.ruolo.value}", size=14)
-                    ]),
-                    ft.Dropdown(
-                        width=150,
-                        value=u.ruolo.value,
-                        options=[
-                            ft.dropdown.Option("RESPONSABILE"),
-                            ft.dropdown.Option("SEGRETERIA"),
-                            ft.dropdown.Option("MAGAZZINIERE")
-                        ],
-                        on_change=lambda e, uid=u.id: handle_change_role(e, uid, e.control.value)
-                    ),
-                    ft.IconButton(icon=ft.icons.DELETE, on_click=lambda e, uid=u.id: handle_delete(e, uid))
-                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                padding=10, bgcolor=ft.colors.WHITE, border_radius=10,
-                shadow=ft.BoxShadow(spread_radius=1, blur_radius=5, color=ft.colors.with_opacity(0.2, ft.colors.BLACK))
-            )
-        )
+    refresh_list()
 
     content = ft.Column([
-        ft.Text("Gestione Dipendenti", size=30, weight=ft.FontWeight.BOLD),
-        ft.Row([nome_field, cognome_field], spacing=10),
-        email_field, password_field, ruolo_dropdown,
-        ft.ElevatedButton("Aggiungi Dipendente", on_click=handle_add, width=250),
-        message_text, ft.Divider(),
-        ft.Text("Lista Dipendenti", size=22, weight=ft.FontWeight.BOLD),
-        ft.Column(user_list, spacing=10, scroll=ft.ScrollMode.AUTO, expand=True)
-    ], spacing=15)
+        build_header(page, "Gestione Dipendenti"),
+        ft.Row([nome_field, cognome_field, email_field, password_field, ruolo_dropdown],
+               alignment=ft.MainAxisAlignment.START, spacing=10),
+        ft.ElevatedButton("Aggiungi Dipendente", on_click=handle_add),
+        message_text,
+        ft.Text("Lista Dipendenti", size=20, weight=ft.FontWeight.BOLD),
+        user_list_column
+    ], spacing=15, expand=True)
 
     return ft.View(
         route="/user_management",
-        bgcolor="#1e90ff",
+        bgcolor="#f5f5f5",
         controls=[
             ft.Row([
                 build_menu(page),
-                ft.Container(content=content, expand=True, bgcolor=ft.colors.WHITE, padding=30, border_radius=15,
-                             shadow=ft.BoxShadow(spread_radius=1, blur_radius=8, color=ft.colors.with_opacity(0.25, ft.colors.BLACK)))
+                ft.Container(
+                    content=content,
+                    expand=True,
+                    bgcolor=ft.Colors.WHITE,
+                    padding=30,
+                    border_radius=15,
+                    shadow=ft.BoxShadow(
+                        spread_radius=1,
+                        blur_radius=8,
+                        color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK)
+                    )
+                )
             ], expand=True)
         ]
     )

@@ -1,14 +1,14 @@
 import flet as ft
 from datetime import date
 from app.models.database import SessionLocal
-from app.services.product_service import get_all_products, update_quantity
+from app.services.product_service import get_all_products, update_product_quantity
 from app.services.rental_service import create_rental
 from app.services.sale_service import create_sale
 from app.services.notification_service import create_notification
-from app.services.damage_service import count_damages_for_product
 from app.schemas.rental_schema import RentalCreate
 from app.schemas.sale_schema import SaleCreate
 from app.utils.menu_builder import build_menu
+from app.utils.header_builder import build_header
 
 def rental_sale_page(page: ft.Page):
     page.theme = ft.Theme(font_family="Montserrat")
@@ -22,112 +22,134 @@ def rental_sale_page(page: ft.Page):
     prodotti = get_all_products(db)
     db.close()
 
-    product_options = [ft.dropdown.Option(f"{p.id} - {p.nome}") for p in prodotti]
-
-    tipo_operazione = ft.Dropdown(
-        options=[ft.dropdown.Option("Noleggio"), ft.dropdown.Option("Vendita")],
-        value="Noleggio", width=300
+    prodotto_dropdown = ft.Dropdown(
+        label="Prodotto",
+        options=[ft.dropdown.Option(str(p.id), f"{p.nome} ({p.categoria})") for p in prodotti],
+        width=300
     )
-    prodotto_dropdown = ft.Dropdown(options=product_options, width=300)
+    tipo_operazione = ft.Dropdown(
+        label="Operazione",
+        options=[ft.dropdown.Option("Noleggio"), ft.dropdown.Option("Vendita")],
+        width=300
+    )
     quantita_field = ft.TextField(label="Quantità", width=300, keyboard_type=ft.KeyboardType.NUMBER)
     cliente_field = ft.TextField(label="Cliente", width=300)
     metodo_pagamento = ft.Dropdown(
+        label="Metodo pagamento",
         options=[
             ft.dropdown.Option("contanti"),
-            ft.dropdown.Option("carta di credito"),
-            ft.dropdown.Option("paypal")
+            ft.dropdown.Option("paypal"),
+            ft.dropdown.Option("carta di credito")
         ],
-        value="contanti", width=300
+        width=300
     )
-    data_inizio_field = ft.TextField(label="Data inizio (YYYY-MM-DD)", width=300, value=str(date.today()))
-    data_fine_field = ft.TextField(label="Data fine (solo per noleggi)", width=300)
-    message_text = ft.Text("", size=16, color="green")
+    data_inizio = ft.TextField(label="Data inizio (YYYY-MM-DD)", value=str(date.today()), width=300)
+    data_fine = ft.TextField(label="Data fine (solo per noleggi)", width=300)
+    message_text = ft.Text("", size=16)
 
-    def handle_save(e):
+    def handle_submit(e):
+        if not prodotto_dropdown.value or not tipo_operazione.value or not quantita_field.value \
+                or not cliente_field.value or not metodo_pagamento.value:
+            message_text.value = "⚠️ Tutti i campi sono obbligatori!"
+            message_text.color = "red"
+            page.update()
+            return
+
+        if tipo_operazione.value == "Noleggio" and not data_fine.value:
+            message_text.value = "⚠️ Per i noleggi devi inserire la data di fine!"
+            message_text.color = "red"
+            page.update()
+            return
+
+        db = SessionLocal()
         try:
-            if not prodotto_dropdown.value:
-                message_text.value = "⚠️ Seleziona un prodotto."
-                message_text.color = "red"
-                page.update()
-                return
-
-            if not quantita_field.value.isdigit() or int(quantita_field.value) <= 0:
-                message_text.value = "⚠️ Inserisci una quantità valida."
-                message_text.color = "red"
-                page.update()
-                return
-
-            if tipo_operazione.value == "Noleggio" and not data_fine_field.value:
-                message_text.value = "⚠️ Inserisci la data fine per il noleggio!"
-                message_text.color = "red"
-                page.update()
-                return
-
-            prodotto_id = int(prodotto_dropdown.value.split(" - ")[0])
+            prodotto_id = int(prodotto_dropdown.value)
             quantita = int(quantita_field.value)
-            cliente = cliente_field.value.strip()
-
-            db = SessionLocal()
-            prodotto_corrente = [p for p in prodotti if p.id == prodotto_id][0]
-            danneggiati = count_damages_for_product(db, prodotto_id)
-            disponibili = max(0, prodotto_corrente.quantita - danneggiati)
-
-            if quantita > disponibili:
-                message_text.value = f"⚠️ Disponibili solo {disponibili} pezzi."
-                message_text.color = "red"
-                db.close()
-                page.update()
-                return
 
             if tipo_operazione.value == "Noleggio":
-                noleggio = create_rental(db, RentalCreate(
+                create_rental(db, RentalCreate(
                     prodotto_id=prodotto_id,
                     quantita=quantita,
-                    cliente=cliente,
-                    data_inizio=date.fromisoformat(data_inizio_field.value),
-                    data_fine=date.fromisoformat(data_fine_field.value),
+                    cliente=cliente_field.value,
+                    data_inizio=date.fromisoformat(data_inizio.value),
+                    data_fine=date.fromisoformat(data_fine.value),
                     stato="in corso",
                     metodo_pagamento=metodo_pagamento.value
                 ))
-                create_notification(db, f"Noleggio per {cliente}", tipo="noleggio", operazione_id=noleggio.id)
+
+                # ✅ Notifica per noleggio
+                create_notification(
+                    db,
+                    messaggio=f"Noleggio registrato: {cliente_field.value} ha noleggiato {quantita}x Prodotto ID {prodotto_id} "
+                              f"({data_inizio.value} → {data_fine.value})",
+                    tipo="noleggio",
+                    operazione_id=prodotto_id
+                )
+
             else:
-                vendita = create_sale(db, SaleCreate(
+                create_sale(db, SaleCreate(
                     prodotto_id=prodotto_id,
                     quantita=quantita,
-                    cliente=cliente,
-                    data_vendita=date.today(),
-                    stato="confermato",
+                    cliente=cliente_field.value,
+                    data_vendita=date.fromisoformat(data_inizio.value),
+                    stato="concluso",
                     metodo_pagamento=metodo_pagamento.value
                 ))
-                create_notification(db, f"Vendita a {cliente}", tipo="vendita", operazione_id=vendita.id)
 
-            update_quantity(db, prodotto_id, max(0, prodotto_corrente.quantita - quantita))
-            db.close()
+                # ✅ Notifica per vendita
+                create_notification(
+                    db,
+                    messaggio=f"Vendita registrata: {cliente_field.value} ha acquistato {quantita}x Prodotto ID {prodotto_id} "
+                              f"({metodo_pagamento.value})",
+                    tipo="vendita",
+                    operazione_id=prodotto_id
+                )
+
+            update_product_quantity(db, prodotto_id, -quantita)
             message_text.value = f"✅ {tipo_operazione.value} registrato con successo!"
             message_text.color = "green"
+
+            # ✅ PORTA DIRETTAMENTE ALLE NOTIFICHE
+            page.go("/notifications")
+
         except Exception as ex:
             message_text.value = f"❌ Errore: {str(ex)}"
             message_text.color = "red"
+        finally:
+            db.close()
         page.update()
 
     content = ft.Column([
-        ft.Text("Registra Noleggio / Vendita", size=30, weight=ft.FontWeight.BOLD),
-        ft.Row([tipo_operazione, prodotto_dropdown], spacing=10),
-        ft.Row([quantita_field, cliente_field], spacing=10),
-        metodo_pagamento, data_inizio_field, data_fine_field,
-        ft.ElevatedButton("Registra", on_click=handle_save, width=250),
+        build_header(page, "Registra Noleggio / Vendita"),
+        tipo_operazione,
+        prodotto_dropdown,
+        quantita_field,
+        cliente_field,
+        metodo_pagamento,
+        data_inizio,
+        data_fine,
+        ft.ElevatedButton("Registra", on_click=handle_submit, width=250),
         message_text
     ], spacing=15, expand=True)
 
     return ft.View(
         route="/rental_sale",
-        bgcolor="#1e90ff",
+        bgcolor="#f9f9f9",
         controls=[
             ft.Row([
                 build_menu(page),
-                ft.Container(content=content, expand=True, bgcolor=ft.Colors.WHITE, padding=30, border_radius=15,
-                             shadow=ft.BoxShadow(spread_radius=1, blur_radius=8,
-                                                 color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK)))
+                ft.Container(
+                    content=content,
+                    expand=True,
+                    bgcolor=ft.Colors.WHITE,
+                    padding=30,
+                    border_radius=15,
+                    shadow=ft.BoxShadow(
+                        spread_radius=1,
+                        blur_radius=8,
+                        color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK)
+                    )
+                )
             ], expand=True)
         ]
     )
