@@ -3,7 +3,7 @@ from app.models.database import SessionLocal
 from app.services.auth_service import authenticate_user
 
 def login_page(page: ft.Page):
-    # ✅ Imposta font globale Montserrat
+    # Imposta font globale Montserrat
     page.theme = ft.Theme(font_family="Montserrat")
     page.update()
 
@@ -23,7 +23,7 @@ def login_page(page: ft.Page):
 
             # Massimizza veramente a schermo intero
             page.window_maximized = True
-            page.window_full_screen = True  # <-- AGGIUNTO ORA
+            page.window_full_screen = True
 
             page.go("/dashboard")
 
@@ -64,5 +64,5 @@ def login_page(page: ft.Page):
         ],
         vertical_alignment=ft.MainAxisAlignment.CENTER,
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-        bgcolor="#1e90ff"  # ✅ Sfondo blu personalizzato
+        bgcolor="#1e90ff"  # Sfondo blu personalizzato
     )

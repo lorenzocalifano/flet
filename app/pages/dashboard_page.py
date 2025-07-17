@@ -1,104 +1,150 @@
 import flet as ft
+import plotly.graph_objects as go
+from flet.plotly_chart import PlotlyChart
 from app.models.database import SessionLocal
-from app.services.product_service import get_all_products
 from app.services.rental_service import get_all_rentals
 from app.services.sale_service import get_all_sales
 from app.services.notification_service import get_unread_notifications
-from app.models.user import User
-from collections import Counter
-from flet.plotly_chart import PlotlyChart
-import plotly.graph_objects as go
-from datetime import datetime
 from app.utils.menu_builder import build_menu
+from app.utils.header_builder import build_header
+from collections import Counter
+from datetime import datetime
 
 def dashboard_page(page: ft.Page):
+    # imposto font unico
     page.theme = ft.Theme(font_family="Montserrat")
     page.update()
 
+    # prendo tutti i dati dal db
     db = SessionLocal()
-    prodotti = get_all_products(db)
     noleggi = get_all_rentals(db)
     vendite = get_all_sales(db)
-    notifiche = get_unread_notifications(db)
-    utenti = db.query(User).all()
+    notifiche_non_lette = len(get_unread_notifications(db))
     db.close()
 
-    # ✅ Grafico a barre
-    prodotti_nomi, noleggi_quantita, vendite_quantita = [], [], []
-    for p in prodotti:
-        n_q = sum(n.quantita for n in noleggi if n.prodotto_id == p.id)
-        v_q = sum(v.quantita for v in vendite if v.prodotto_id == p.id)
-        if n_q > 0 or v_q > 0:
-            prodotti_nomi.append(p.nome)
-            noleggi_quantita.append(n_q)
-            vendite_quantita.append(v_q)
-    grafico_barre = PlotlyChart(
-        go.Figure(
-            data=[
-                go.Bar(name="Noleggi", x=prodotti_nomi, y=noleggi_quantita, marker=dict(color="blue")),
-                go.Bar(name="Vendite", x=prodotti_nomi, y=vendite_quantita, marker=dict(color="green"))
-            ]
-        ).update_layout(barmode="group", title="Noleggi e Vendite per Prodotto", height=400)
+    # calcolo dati del mese corrente
+    mese_corrente = datetime.now().month
+    noleggi_mese = len([n for n in noleggi if n.data_inizio.month == mese_corrente])
+    vendite_mese = len([v for v in vendite if v.data_vendita.month == mese_corrente])
+
+    # box con i numeri principali
+    def stat_box(titolo, valore, colore):
+        return ft.Container(
+            content=ft.Column([
+                ft.Text(titolo, size=16, weight=ft.FontWeight.BOLD, color=colore),
+                ft.Text(str(valore), size=28, weight=ft.FontWeight.BOLD, color=colore)
+            ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER
+            ),
+            bgcolor=ft.Colors.with_opacity(0.05, colore),
+            padding=20,
+            border_radius=10,
+            expand=True
+        )
+
+    # 3 box affiancati: noleggi, vendite e notifiche
+    stats_row = ft.Row([
+        stat_box("Noleggi mese", noleggi_mese, ft.Colors.BLUE),
+        stat_box("Vendite mese", vendite_mese, ft.Colors.GREEN),
+        stat_box("Notifiche non lette", notifiche_non_lette, ft.Colors.RED)
+    ], spacing=15, expand=True)
+
+    # === GRAFICO ANDAMENTO MENSILE ===
+    # qui raccogliamo i dati per mese, forse conviene unificare in futuro ma per ora va bene
+    mesi_noleggi = {}
+    mesi_vendite = {}
+    for n in noleggi:
+        m = n.data_inizio.strftime("%b")
+        mesi_noleggi[m] = mesi_noleggi.get(m, 0) + 1
+    for v in vendite:
+        m = v.data_vendita.strftime("%b")
+        mesi_vendite[m] = mesi_vendite.get(m, 0) + 1
+
+    # ordino i mesi, magari se c'è poco traffico è inutile ma lo lascio
+    mesi = sorted(set(mesi_noleggi.keys()) | set(mesi_vendite.keys()), key=lambda x: datetime.strptime(x, "%b").month)
+
+    andamento_fig = go.Figure()
+    andamento_fig.add_trace(go.Scatter(
+        x=mesi,
+        y=[mesi_noleggi.get(m, 0) for m in mesi],
+        mode="lines+markers",
+        name="Noleggi",
+        line=dict(color="blue")
+    ))
+    andamento_fig.add_trace(go.Scatter(
+        x=mesi,
+        y=[mesi_vendite.get(m, 0) for m in mesi],
+        mode="lines+markers",
+        name="Vendite",
+        line=dict(color="green")
+    ))
+    andamento_fig.update_layout(
+        title=dict(
+            text="Andamento Mensile",  # titolone, in futuro traduciamo dinamicamente
+            font=dict(family="Montserrat", size=22, color="black"),
+            x=0.5
+        ),
+        margin=dict(l=0, r=0, t=40, b=0),
+        plot_bgcolor="white"
     )
+    andamento_chart = PlotlyChart(andamento_fig, expand=True)
 
-    # ✅ Grafico a torta
-    ruoli = [u.ruolo.value for u in utenti]
-    conteggio_ruoli = Counter(ruoli)
-    grafico_torta = PlotlyChart(
-        go.Figure(
-            data=[go.Pie(labels=list(conteggio_ruoli.keys()), values=list(conteggio_ruoli.values()), hole=0.4)]
-        ).update_layout(title="Distribuzione Ruoli Dipendenti", height=400)
+    # === GRAFICO TOP PRODOTTI ===
+    prodotti_noleggiati = Counter([n.prodotto_id for n in noleggi])
+    top_prodotti = prodotti_noleggiati.most_common(5)  # se ne abbiamo pochi, amen
+
+    if top_prodotti:
+        prodotti = [str(pid) for pid, _ in top_prodotti]
+        valori = [q for _, q in top_prodotti]
+    else:
+        prodotti, valori = [], []  # in caso db vuoto
+
+    top_fig = go.Figure()
+    top_fig.add_trace(go.Bar(
+        x=prodotti,
+        y=valori,
+        marker_color="orange",
+        name="Top Noleggi"
+    ))
+    top_fig.update_layout(
+        title=dict(
+            text="Top 5 Prodotti Noleggiati",  # uniamo noleggi+vendite?
+            font=dict(family="Montserrat", size=22, color="black"),
+            x=0.5
+        ),
+        margin=dict(l=0, r=0, t=40, b=0),
+        plot_bgcolor="white"
     )
+    top_chart = PlotlyChart(top_fig, expand=True)
 
-    # ✅ Grafico a linee
-    def group_by_month(operazioni, field):
-        counter = Counter([getattr(o, field).strftime("%Y-%m") for o in operazioni])
-        mesi = sorted(counter.keys())
-        valori = [counter[m] for m in mesi]
-        return mesi, valori
+    grafici_row = ft.Row([andamento_chart, top_chart], spacing=15, expand=True)
 
-    mesi_n, valori_n = group_by_month(noleggi, "data_inizio")
-    mesi_v, valori_v = group_by_month(vendite, "data_vendita")
-    mesi = sorted(set(mesi_n) | set(mesi_v))
-    valori_n_all = [valori_n[mesi_n.index(m)] if m in mesi_n else 0 for m in mesi]
-    valori_v_all = [valori_v[mesi_v.index(m)] if m in mesi_v else 0 for m in mesi]
-    grafico_linee = PlotlyChart(
-        go.Figure(
-            data=[
-                go.Scatter(x=mesi, y=valori_n_all, mode="lines+markers", name="Noleggi", line=dict(color="blue")),
-                go.Scatter(x=mesi, y=valori_v_all, mode="lines+markers", name="Vendite", line=dict(color="green"))
-            ]
-        ).update_layout(title="Andamento Mensile", height=400)
-    )
-
+    # === ASSEMBLA TUTTO ===
     content = ft.Column([
-        ft.Text("Dashboard", size=35, weight=ft.FontWeight.BOLD),
-        ft.Row([
-            ft.Container(content=ft.Column([
-                ft.Text("Prodotti in magazzino", size=18),
-                ft.Text(str(len(prodotti)), size=28, weight=ft.FontWeight.BOLD)
-            ]), width=250, height=120, padding=15, bgcolor=ft.colors.BLUE_100, border_radius=10),
-            ft.Container(content=ft.Column([
-                ft.Text("Noleggi totali", size=18),
-                ft.Text(str(len(noleggi)), size=28, weight=ft.FontWeight.BOLD)
-            ]), width=250, height=120, padding=15, bgcolor=ft.colors.GREEN_100, border_radius=10),
-            ft.Container(content=ft.Column([
-                ft.Text("Notifiche non lette", size=18),
-                ft.Text(str(len(notifiche)), size=28, weight=ft.FontWeight.BOLD)
-            ]), width=250, height=120, padding=15, bgcolor=ft.colors.AMBER_100, border_radius=10)
-        ], spacing=30),
-        ft.Row([grafico_barre, grafico_torta], spacing=30),
-        grafico_linee
-    ], spacing=30, scroll=ft.ScrollMode.AUTO)
+        build_header(page, "Dashboard"),  # header unico ovunque
+        stats_row,
+        grafici_row
+    ], spacing=25, expand=True)
 
     return ft.View(
         route="/dashboard",
-        bgcolor="#1e90ff",
+        bgcolor="#f5f5f5",
         controls=[
             ft.Row([
-                build_menu(page),  # ✅ MENU UNICO E COERENTE
-                ft.Container(content=content, expand=True, bgcolor=ft.colors.WHITE, padding=30, border_radius=15,
-                             shadow=ft.BoxShadow(spread_radius=1, blur_radius=8, color=ft.colors.with_opacity(0.25, ft.colors.BLACK)))
+                build_menu(page),
+                ft.Container(
+                    content=content,
+                    expand=True,
+                    bgcolor=ft.Colors.WHITE,
+                    padding=30,
+                    border_radius=15,
+                    shadow=ft.BoxShadow(
+                        spread_radius=1,
+                        blur_radius=8,
+                        color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK)
+                    )
+                )
             ], expand=True)
         ]
     )

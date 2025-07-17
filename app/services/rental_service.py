@@ -3,14 +3,15 @@ from app.models.rental import Rental
 from app.schemas.rental_schema import RentalCreate
 from datetime import date
 
-# ✅ Crea un nuovo noleggio
+# === SERVIZI PER I NOLEGGI ===
 def create_rental(db: Session, rental: RentalCreate):
+    # crea un nuovo noleggio
     nuovo = Rental(
         prodotto_id=rental.prodotto_id,
         quantita=rental.quantita,
         cliente=rental.cliente,
-        data_inizio=rental.data_inizio or date.today(),
-        data_fine=rental.data_fine or date.today(),
+        data_inizio=rental.data_inizio or date.today(),  # se non specificata, oggi di default
+        data_fine=rental.data_fine or date.today(),  # forse potremmo forzare > data_inizio
         stato=rental.stato or "in corso",
         metodo_pagamento=rental.metodo_pagamento
     )
@@ -19,12 +20,14 @@ def create_rental(db: Session, rental: RentalCreate):
     db.refresh(nuovo)
     return nuovo
 
-# ✅ Ottieni tutti i noleggi
+
 def get_all_rentals(db: Session):
+    # restituisce tutti i noleggi registrati
     return db.query(Rental).all()
 
-# ✅ CONCLUSIONE NOLEGGIO (se già presente)
+
 def conclude_rental(db: Session, rental_id: int):
+    # cambia lo stato di un noleggio in "concluso"
     noleggio = db.query(Rental).filter(Rental.id == rental_id).first()
     if noleggio:
         noleggio.stato = "concluso"
@@ -32,6 +35,7 @@ def conclude_rental(db: Session, rental_id: int):
         db.refresh(noleggio)
     return noleggio
 
-# ✅ NUOVA: ottieni un noleggio per ID
+
 def get_rental_by_id(db: Session, rental_id: int):
+    # cerca un noleggio per ID, utile per i dettagli nelle notifiche
     return db.query(Rental).filter(Rental.id == rental_id).first()

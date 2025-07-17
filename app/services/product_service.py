@@ -2,8 +2,11 @@ from sqlalchemy.orm import Session
 from app.models.product import Product
 from app.schemas.product_schema import ProductCreate
 
+# === SERVIZI PER LA GESTIONE PRODOTTI ===
 def create_product(db: Session, product: ProductCreate):
-    nuovo_prodotto = Product(
+    # crea un nuovo prodotto nel db
+    # TODO: forse dovremmo controllare se esiste già un prodotto con lo stesso nome
+    nuovo = Product(
         nome=product.nome,
         categoria=product.categoria,
         quantita=product.quantita,
@@ -11,33 +14,36 @@ def create_product(db: Session, product: ProductCreate):
         dimensione=product.dimensione,
         brand=product.brand
     )
-    db.add(nuovo_prodotto)
+    db.add(nuovo)
     db.commit()
-    db.refresh(nuovo_prodotto)
-    return nuovo_prodotto
+    db.refresh(nuovo)
+    return nuovo
+
 
 def get_all_products(db: Session):
+    # restituisce tutti i prodotti
     return db.query(Product).all()
 
+
 def get_product_by_id(db: Session, product_id: int):
+    # cerca un prodotto per ID, restituisce None se non trovato
     return db.query(Product).filter(Product.id == product_id).first()
 
-def update_quantity(db: Session, product_id: int, new_quantity: int):
-    prodotto = get_product_by_id(db, product_id)
+
+def update_product_quantity(db: Session, product_id: int, quantity_change: int):
+    # aggiorna la quantità di un prodotto
+    prodotto = db.query(Product).filter(Product.id == product_id).first()
     if prodotto:
-        prodotto.quantita = new_quantity
+        prodotto.quantita += quantity_change
         db.commit()
         db.refresh(prodotto)
     return prodotto
 
-def update_product_quantity(db: Session, product_id: int, quantity_change: int):
-    """
-    Aggiorna la quantità di un prodotto (aggiunge o toglie quantità).
-    Esempio: quantity_change = -3 per togliere 3 pezzi.
-    """
+
+def delete_product(db: Session, product_id: int):
+    # elimina un prodotto dal db
     prodotto = db.query(Product).filter(Product.id == product_id).first()
     if prodotto:
-        prodotto.quantita = max(0, prodotto.quantita + quantity_change)
+        db.delete(prodotto)
         db.commit()
-        db.refresh(prodotto)
     return prodotto

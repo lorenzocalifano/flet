@@ -6,17 +6,21 @@ from app.utils.menu_builder import build_menu
 from app.utils.header_builder import build_header
 
 def user_management_page(page: ft.Page):
+    # solito font montserrat (coerenza grafica)
     page.theme = ft.Theme(font_family="Montserrat")
     page.update()
 
+    # controllo permessi: solo il responsabile può accedere qui
     if page.session.get("user_role") != "RESPONSABILE":
         page.go("/dashboard")
         return
 
+    # prendo subito gli utenti
     db = SessionLocal()
     utenti = get_all_users(db)
     db.close()
 
+    # campi per aggiungere nuovo dipendente
     nome_field = ft.TextField(label="Nome", width=200)
     cognome_field = ft.TextField(label="Cognome", width=200)
     email_field = ft.TextField(label="Email", width=200)
@@ -26,28 +30,35 @@ def user_management_page(page: ft.Page):
         options=[ft.dropdown.Option(r.name) for r in UserRole],
         width=200
     )
-    message_text = ft.Text("", size=14, color="green")
+    message_text = ft.Text("", size=14, color="green")  # per feedback
 
+    # colonna scrollabile con la lista degli utenti (se sono tanti, non blocca la pagina)
     user_list_column = ft.Column(spacing=10, scroll=ft.ScrollMode.AUTO, expand=True)
 
+    # === FUNZIONE PER RINFRESCARE LA LISTA ===
     def refresh_list():
         db = SessionLocal()
         utenti = get_all_users(db)
         db.close()
+
         user_list_column.controls.clear()
 
         for u in utenti:
+            # dropdown per cambiare ruolo direttamente dalla lista (comodo)
             role_dropdown = ft.Dropdown(
                 value=u.ruolo.name,
                 options=[ft.dropdown.Option(r.name) for r in UserRole],
                 width=150,
                 on_change=lambda e, uid=u.id: update_role(uid, e.control.value)
             )
+            # bottone per eliminare l’utente
             delete_btn = ft.IconButton(
                 icon=ft.Icons.DELETE,
                 icon_color=ft.Colors.RED,
                 on_click=lambda e, uid=u.id: handle_delete(uid)
             )
+
+            # card utente
             user_list_column.controls.append(
                 ft.Container(
                     content=ft.Row([
@@ -65,7 +76,9 @@ def user_management_page(page: ft.Page):
             )
         page.update()
 
+    # === FUNZIONE PER AGGIUNGERE UN NUOVO DIPENDENTE ===
     def handle_add(e):
+        # controlli
         if not nome_field.value or not cognome_field.value or not email_field.value or not password_field.value or not ruolo_dropdown.value:
             message_text.value = "⚠️ Tutti i campi sono obbligatori!"
             message_text.color = "red"
@@ -83,12 +96,14 @@ def user_management_page(page: ft.Page):
                 message_text.color = "green"
                 refresh_list()
             except Exception as ex:
+                # TODO: gestire meglio errori (es. email già esistente)
                 message_text.value = f"❌ Errore: {str(ex)}"
                 message_text.color = "red"
             finally:
                 db.close()
         page.update()
 
+    # === FUNZIONE PER ELIMINARE UN UTENTE ===
     def handle_delete(user_id):
         db = SessionLocal()
         try:
@@ -97,6 +112,7 @@ def user_management_page(page: ft.Page):
         finally:
             db.close()
 
+    # === FUNZIONE PER CAMBIARE IL RUOLO DI UN UTENTE ===
     def update_role(user_id, new_role):
         db = SessionLocal()
         try:
@@ -105,10 +121,12 @@ def user_management_page(page: ft.Page):
         finally:
             db.close()
 
-    refresh_list()
+    refresh_list()  # inizializzo subito la lista
 
+    # === ASSEMBLA TUTTO ===
     content = ft.Column([
         build_header(page, "Gestione Dipendenti"),
+        # riga con i campi per aggiungere nuovo utente
         ft.Row([nome_field, cognome_field, email_field, password_field, ruolo_dropdown],
                alignment=ft.MainAxisAlignment.START, spacing=10),
         ft.ElevatedButton("Aggiungi Dipendente", on_click=handle_add),
@@ -119,7 +137,7 @@ def user_management_page(page: ft.Page):
 
     return ft.View(
         route="/user_management",
-        bgcolor="#f5f5f5",
+        bgcolor="#f5f5f5",  # stesso sfondo delle altre pagine di gestione
         controls=[
             ft.Row([
                 build_menu(page),

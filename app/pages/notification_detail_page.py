@@ -38,7 +38,7 @@ def notification_detail_page(page: ft.Page):
             ])
     db.close()
 
-    # ✅ Se non ci sono dettagli, aggiungiamo un messaggio generico
+    # Se non ci sono dettagli, aggiungiamo un messaggio generico
     if not operazione_dettagli:
         operazione_dettagli.append(ft.Text("Nessun dettaglio aggiuntivo", size=16))
 

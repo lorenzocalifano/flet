@@ -5,14 +5,17 @@ from app.services.damage_service import count_damages_for_product
 from app.utils.menu_builder import build_menu
 
 def product_detail_page(page: ft.Page):
+    # solito tema, Montserrat ovunque per coerenza grafica
     page.theme = ft.Theme(font_family="Montserrat")
     page.update()
 
+    # recupero product_id dalla querystring (TODO: forse va validato meglio)
     try:
         product_id = page.query.get("product_id")
     except:
         product_id = None
 
+    # se non ho il product_id mostro un errore basic (potremmo farlo più carino)
     if not product_id:
         return ft.View(
             route="/product_detail",
@@ -31,12 +34,14 @@ def product_detail_page(page: ft.Page):
             ]
         )
 
+    # prendo il prodotto dal db
     db = SessionLocal()
     prodotto = get_product_by_id(db, int(product_id))
     danneggiati = count_damages_for_product(db, int(product_id))
     db.close()
 
     if not prodotto:
+        # stessa schermata d'errore se il prodotto non esiste
         return ft.View(
             route="/product_detail",
             bgcolor="#1e90ff",
@@ -54,9 +59,11 @@ def product_detail_page(page: ft.Page):
             ]
         )
 
+    # calcolo disponibili e preparo lo stato
     disponibili = max(0, prodotto.quantita - danneggiati)
     stato = f"{disponibili}/{prodotto.quantita} disponibili (danneggiati: {danneggiati})"
 
+    # dettagli del prodotto in colonna
     dettagli = ft.Column([
         ft.Text(f"Nome: {prodotto.nome}", size=18, weight=ft.FontWeight.BOLD),
         ft.Text(f"Categoria: {prodotto.categoria}", size=16),
@@ -66,13 +73,18 @@ def product_detail_page(page: ft.Page):
         ft.Text(f"Stato: {stato}", size=16)
     ], spacing=8)
 
+    # bottone per modificare il prodotto (solo per ruoli con permessi)
     buttons = []
     if page.session.get("user_role") in ["RESPONSABILE", "MAGAZZINIERE"]:
         buttons.append(
-            ft.ElevatedButton("Modifica Prodotto", width=250,
-                              on_click=lambda e: page.go(f"/add_edit_product?product_id={prodotto.id}"))
+            ft.ElevatedButton(
+                "Modifica Prodotto",
+                width=250,
+                on_click=lambda e: page.go(f"/add_edit_product?product_id={prodotto.id}")
+            )
         )
 
+    # assemblo il contenuto principale
     content = ft.Column([
         ft.Text("Dettaglio Prodotto", size=30, weight=ft.FontWeight.BOLD),
         dettagli,
@@ -82,7 +94,7 @@ def product_detail_page(page: ft.Page):
 
     return ft.View(
         route="/product_detail",
-        bgcolor="#1e90ff",
+        bgcolor="#1e90ff",  # sfondo blu tenue per coerenza con il resto
         controls=[
             ft.Row([
                 build_menu(page),

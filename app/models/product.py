@@ -9,7 +9,7 @@ class Product(Base):
     categoria = Column(String, nullable=False)
     quantita = Column(Integer, default=0)
 
-    # ✅ NUOVI CAMPI
+    # NUOVI CAMPI
     modello = Column(String, nullable=True)
     dimensione = Column(String, nullable=True)
     brand = Column(String, nullable=True)
