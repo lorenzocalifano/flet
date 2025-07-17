@@ -15,47 +15,40 @@ def history_page(page: ft.Page):
 
     operazioni = []
 
-    for n in noleggi:
-        operazioni.append(
-            ft.Container(
-                content=ft.Column([
-                    ft.Text("NOLEGGIO", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE),
-                    ft.Text(f"Cliente: {n.cliente}", size=14),
-                    ft.Text(f"Prodotto ID: {n.prodotto_id}", size=14),
-                    ft.Text(f"Quantità: {n.quantita}", size=14),
-                    ft.Text(f"Metodo pagamento: {n.metodo_pagamento}", size=14),
-                    ft.Text(f"Stato: {n.stato}", size=14),
-                    ft.Text(f"Periodo: {n.data_inizio} → {n.data_fine}", size=14)
-                ], spacing=5),
-                padding=15,
-                bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.BLUE),
-                border_radius=10,
-                expand=True
-            )
+    def build_card(titolo, colore, dettagli):
+        return ft.Container(
+            content=ft.Column(dettagli, spacing=5, expand=True),
+            padding=15,
+            bgcolor=ft.Colors.with_opacity(0.05, colore),
+            border_radius=10,
+            expand=True
         )
 
+    for n in noleggi:
+        operazioni.append(build_card("NOLEGGIO", ft.Colors.BLUE, [
+            ft.Text("NOLEGGIO", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE),
+            ft.Text(f"Cliente: {n.cliente}", size=14),
+            ft.Text(f"Prodotto ID: {n.prodotto_id}", size=14),
+            ft.Text(f"Quantità: {n.quantita}", size=14),
+            ft.Text(f"Metodo pagamento: {n.metodo_pagamento}", size=14),
+            ft.Text(f"Stato: {n.stato}", size=14),
+            ft.Text(f"Periodo: {n.data_inizio} → {n.data_fine}", size=14)
+        ]))
+
     for v in vendite:
-        operazioni.append(
-            ft.Container(
-                content=ft.Column([
-                    ft.Text("VENDITA", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN),
-                    ft.Text(f"Cliente: {v.cliente}", size=14),
-                    ft.Text(f"Prodotto ID: {v.prodotto_id}", size=14),
-                    ft.Text(f"Quantità: {v.quantita}", size=14),
-                    ft.Text(f"Metodo pagamento: {v.metodo_pagamento}", size=14),
-                    ft.Text(f"Stato: {v.stato}", size=14),
-                    ft.Text(f"Data: {v.data_vendita}", size=14)
-                ], spacing=5),
-                padding=15,
-                bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.GREEN),
-                border_radius=10,
-                expand=True
-            )
-        )
+        operazioni.append(build_card("VENDITA", ft.Colors.GREEN, [
+            ft.Text("VENDITA", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN),
+            ft.Text(f"Cliente: {v.cliente}", size=14),
+            ft.Text(f"Prodotto ID: {v.prodotto_id}", size=14),
+            ft.Text(f"Quantità: {v.quantita}", size=14),
+            ft.Text(f"Metodo pagamento: {v.metodo_pagamento}", size=14),
+            ft.Text(f"Stato: {v.stato}", size=14),
+            ft.Text(f"Data: {v.data_vendita}", size=14)
+        ]))
 
     content = ft.Column([
         ft.Text("Storico Operazioni", size=30, weight=ft.FontWeight.BOLD),
-        ft.Column(operazioni, spacing=12, scroll=ft.ScrollMode.AUTO, expand=True)
+        ft.ListView(controls=operazioni, spacing=12, expand=True)
     ], spacing=20, expand=True)
 
     return ft.View(
