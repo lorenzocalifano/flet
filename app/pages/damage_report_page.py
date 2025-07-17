@@ -1,9 +1,9 @@
 import flet as ft
+from datetime import date
 from app.models.database import SessionLocal
 from app.services.product_service import get_all_products
 from app.services.damage_service import report_damage
 from app.schemas.damage_schema import DamageCreate
-from datetime import date
 from app.utils.menu_builder import build_menu
 
 def damage_report_page(page: ft.Page):
@@ -54,8 +54,9 @@ def damage_report_page(page: ft.Page):
         controls=[
             ft.Row([
                 build_menu(page),
-                ft.Container(content=content, expand=True, bgcolor=ft.colors.WHITE, padding=30, border_radius=15,
-                             shadow=ft.BoxShadow(spread_radius=1, blur_radius=8, color=ft.colors.with_opacity(0.25, ft.colors.BLACK)))
+                ft.Container(content=content, expand=True, bgcolor=ft.Colors.WHITE, padding=30, border_radius=15,
+                             shadow=ft.BoxShadow(spread_radius=1, blur_radius=8,
+                                                 color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK)))
             ], expand=True)
         ]
     )

@@ -106,7 +106,7 @@ def user_management_page(page: ft.Page):
         ft.ElevatedButton("Aggiungi Dipendente", on_click=handle_add, width=250),
         message_text, ft.Divider(),
         ft.Text("Lista Dipendenti", size=22, weight=ft.FontWeight.BOLD),
-        ft.Column(user_list, spacing=10, scroll=ft.ScrollMode.AUTO)
+        ft.Column(user_list, spacing=10, scroll=ft.ScrollMode.AUTO, expand=True)
     ], spacing=15)
 
     return ft.View(

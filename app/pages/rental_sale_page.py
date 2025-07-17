@@ -96,11 +96,12 @@ def rental_sale_page(page: ft.Page):
 
     content = ft.Column([
         ft.Text("Registra Noleggio / Vendita", size=30, weight=ft.FontWeight.BOLD),
-        tipo_operazione, prodotto_dropdown, quantita_field, cliente_field,
+        ft.Row([tipo_operazione, prodotto_dropdown], spacing=10),
+        ft.Row([quantita_field, cliente_field], spacing=10),
         metodo_pagamento, data_inizio_field, data_fine_field,
         ft.ElevatedButton("Registra", on_click=handle_save, width=250),
         message_text
-    ], spacing=10, scroll=ft.ScrollMode.AUTO)
+    ], spacing=15, expand=True)
 
     return ft.View(
         route="/rental_sale",
