@@ -1,16 +1,15 @@
-from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy import Column, Integer, String
 from app.models.database import Base
 
 class Product(Base):
     __tablename__ = "products"
-    __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, index=True)
     nome = Column(String, nullable=False)
     categoria = Column(String, nullable=False)
-    brand = Column(String, nullable=True)
+    quantita = Column(Integer, default=0)
+
+    # ✅ NUOVI CAMPI
     modello = Column(String, nullable=True)
-    potenza = Column(String, nullable=True)
     dimensione = Column(String, nullable=True)
-    quantita = Column(Integer, nullable=False, default=0)
-    disponibile = Column(Boolean, default=True)  # importante per bloccare i danneggiati
+    brand = Column(String, nullable=True)
