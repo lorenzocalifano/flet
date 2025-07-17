@@ -12,13 +12,18 @@ def add_edit_product_page(page: ft.Page):
         page.go("/dashboard")
         return
 
+    # ✅ Leggiamo l'ID del prodotto dalla query
     product_id = page.query.get("product_id")
     prodotto = None
 
     if product_id:
-        db = SessionLocal()
-        prodotto = get_product_by_id(db, int(product_id))
-        db.close()
+        try:
+            db = SessionLocal()
+            prodotto = get_product_by_id(db, int(product_id))
+            db.close()
+        except Exception as e:
+            print(f"Errore nel recupero prodotto: {e}")
+            prodotto = None
 
     nome_field = ft.TextField(label="Nome", value=prodotto.nome if prodotto else "", width=300)
     categoria_field = ft.TextField(label="Categoria", value=prodotto.categoria if prodotto else "", width=300)
@@ -28,35 +33,42 @@ def add_edit_product_page(page: ft.Page):
 
     def handle_save(e):
         if not nome_field.value or not categoria_field.value or not quantita_field.value:
-            message_text.value = "Tutti i campi sono obbligatori!"
+            message_text.value = "⚠️ Tutti i campi sono obbligatori!"
             message_text.color = "red"
             page.update()
             return
 
         db = SessionLocal()
-        if prodotto:
-            prodotto.nome = nome_field.value
-            prodotto.categoria = categoria_field.value
-            prodotto.quantita = int(quantita_field.value)
-            db.commit()
-            message_text.value = f"✅ Prodotto '{prodotto.nome}' aggiornato!"
-        else:
-            nuovo = create_product(db, ProductCreate(
-                nome=nome_field.value,
-                categoria=categoria_field.value,
-                quantita=int(quantita_field.value)
-            ))
-            message_text.value = f"✅ Prodotto '{nuovo.nome}' aggiunto!"
-        db.close()
-
-        message_text.color = "green"
+        try:
+            if prodotto:
+                # ✅ Aggiornamento prodotto
+                prodotto.nome = nome_field.value
+                prodotto.categoria = categoria_field.value
+                prodotto.quantita = int(quantita_field.value)
+                db.commit()
+                message_text.value = f"✅ Prodotto '{prodotto.nome}' aggiornato!"
+            else:
+                # ✅ Nuovo prodotto
+                nuovo = create_product(db, ProductCreate(
+                    nome=nome_field.value,
+                    categoria=categoria_field.value,
+                    quantita=int(quantita_field.value)
+                ))
+                message_text.value = f"✅ Prodotto '{nuovo.nome}' aggiunto!"
+            message_text.color = "green"
+        except Exception as ex:
+            message_text.value = f"❌ Errore: {str(ex)}"
+            message_text.color = "red"
+        finally:
+            db.close()
         page.update()
 
     content = ft.Column([
         ft.Text("Aggiungi / Modifica Prodotto", size=30, weight=ft.FontWeight.BOLD),
         nome_field, categoria_field, quantita_field,
         ft.ElevatedButton("Salva", on_click=handle_save, width=250),
-        message_text
+        message_text,
+        ft.ElevatedButton("⬅ Torna al Catalogo", on_click=lambda e: page.go("/catalog"), width=250)
     ], spacing=15)
 
     return ft.View(
