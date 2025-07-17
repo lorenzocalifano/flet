@@ -10,5 +10,5 @@ __pycache__/
 # Database SQLite
 *.db
 
-# FLET STORAGE
+# Flet Storage
 storage/
