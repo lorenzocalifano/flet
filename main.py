@@ -1,4 +1,6 @@
 import flet as ft
+import threading
+import time
 
 # ✅ Pagine
 from app.pages.login_page import login_page
@@ -35,71 +37,55 @@ def main(page: ft.Page):
     page.window_width = 420
     page.window_height = 520
     page.window_resizable = True
-    page.window_bgcolor = ft.Colors.BLUE_700
-    page.bgcolor = "#1e90ff"
+    page.update()
 
-    # ✅ Crea DB e utenti test
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
-    try:
-        if not db.query(User).first():
-            register_user(db, UserCreate(nome="Mario", cognome="Rossi",
-                                         email="mario.rossi@test.com", password="123456",
-                                         ruolo=UserRole.RESPONSABILE))
-            register_user(db, UserCreate(nome="Luca", cognome="Bianchi",
-                                         email="luca.bianchi@test.com", password="123456",
-                                         ruolo=UserRole.SEGRETERIA))
-            register_user(db, UserCreate(nome="Giulia", cognome="Verdi",
-                                         email="giulia.verdi@test.com", password="123456",
-                                         ruolo=UserRole.MAGAZZINIERE))
-            print("✅ Utenti di test creati!")
-    finally:
-        db.close()
-
-    # noinspection PyUnreachableCode
+    # ✅ Funzione per massimizzare DOPO il login
+    def maximize_after_login():
+        time.sleep(0.5)  # Flet ha bisogno di creare la finestra prima
+        page.window_maximized = True
+        page.window_full_screen = False  # Evita modalità "iPad" su Mac
+        page.update()
 
     # ✅ Routing
     def route_change(e):
         page.views.clear()
 
-        # ✅ Se non siamo più nel login → massimizza
-        if page.route != "/":
-            page.window_maximized = True
-            page.window_full_screen = False  # evita modalità "iPad" su Mac
-            page.window_width = 1280
-            page.window_height = 720
-
-        if page.route.startswith("/product_detail"):
-            page.views.append(product_detail_page(page))
-        elif page.route.startswith("/quantity_update"):
-            page.views.append(quantity_update_page(page))
-        elif page.route.startswith("/notification_detail"):
-            page.views.append(notification_detail_page(page))
-        elif page.route == "/":
+        if page.route == "/":
             page.views.append(login_page(page))
-        elif page.route == "/dashboard":
-            page.views.append(dashboard_page(page))
-        elif page.route == "/catalog":
-            page.views.append(catalog_page(page))
-        elif page.route == "/history":
-            page.views.append(history_page(page))
-        elif page.route == "/user_management":
-            page.views.append(user_management_page(page))
-        elif page.route == "/damage_report":
-            page.views.append(damage_report_page(page))
-        elif page.route == "/notifications":
-            page.views.append(notifications_page(page))
-        elif page.route == "/rental_sale":
-            page.views.append(rental_sale_page(page))
-        elif page.route == "/reset_password":
-            page.views.append(reset_password_page(page))
-        elif page.route.startswith("/add_edit_product"):
-            page.views.append(add_edit_product_page(page))
+        else:
+            # ✅ Ogni volta che usciamo dal login, massimizziamo
+            threading.Thread(target=maximize_after_login).start()
+
+            if page.route == "/dashboard":
+                page.views.append(dashboard_page(page))
+            elif page.route.startswith("/catalog"):
+                page.views.append(catalog_page(page))
+            elif page.route.startswith("/product_detail"):
+                page.views.append(product_detail_page(page))
+            elif page.route.startswith("/add_edit_product"):
+                page.views.append(add_edit_product_page(page))
+            elif page.route.startswith("/quantity_update"):
+                page.views.append(quantity_update_page(page))
+            elif page.route == "/rental_sale":
+                page.views.append(rental_sale_page(page))
+            elif page.route == "/history":
+                page.views.append(history_page(page))
+            elif page.route == "/user_management":
+                page.views.append(user_management_page(page))
+            elif page.route == "/damage_report":
+                page.views.append(damage_report_page(page))
+            elif page.route == "/notifications":
+                page.views.append(notifications_page(page))
+            elif page.route.startswith("/notification_detail"):
+                page.views.append(notification_detail_page(page))
+            elif page.route == "/reset_password":
+                page.views.append(reset_password_page(page))
 
         page.update()
 
     page.on_route_change = route_change
     page.go(page.route or "/")
 
-
 ft.app(target=main)
+
+# noinspection PyUnreachableCode
