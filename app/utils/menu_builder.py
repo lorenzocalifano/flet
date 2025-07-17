@@ -1,49 +1,50 @@
 import flet as ft
+from app.models.database import SessionLocal
+from app.services.notification_service import get_unread_notifications
 
-def build_menu(page):
-    user_role = page.session.get("user_role") or "MAGAZZINIERE"
-    user_name = page.session.get("user_name") or "Utente"
+def build_menu(page: ft.Page):
+    user_name = page.session.get("user_name", "Utente")
+    user_role = page.session.get("user_role", "N/A")
 
-    def menu_button(text, icon, route):
-        return ft.ElevatedButton(
-            text,
-            icon=icon,
-            on_click=lambda e: page.go(route),
-            style=ft.ButtonStyle(
-                overlay_color=ft.colors.with_opacity(0.1, ft.colors.WHITE),
-                shape=ft.RoundedRectangleBorder(radius=8)
-            )
-        )
+    # ✅ Conta notifiche non lette
+    db = SessionLocal()
+    unread = len(get_unread_notifications(db))
+    db.close()
 
-    menu_items = [
-        ft.Text(f"👤 {user_name}", size=18, weight=ft.FontWeight.BOLD, color=ft.colors.WHITE),
-        ft.Text(f"Ruolo: {user_role}", size=14, color=ft.colors.WHITE),
-        ft.Divider(height=10, color=ft.colors.WHITE),
-        menu_button("Dashboard", ft.icons.DASHBOARD, "/dashboard"),
-        menu_button("Catalogo", ft.icons.INVENTORY, "/catalog"),
-        menu_button("Notifiche", ft.icons.NOTIFICATIONS, "/notifications")
+    badge = ft.Container(
+        content=ft.Text(str(unread), color=ft.Colors.WHITE, size=12, weight=ft.FontWeight.BOLD),
+        bgcolor=ft.Colors.RED,
+        border_radius=10,
+        padding=5,
+        visible=unread > 0
+    )
+
+    buttons = [
+        ft.ElevatedButton("Dashboard", on_click=lambda e: page.go("/dashboard")),
+        ft.ElevatedButton("Catalogo", on_click=lambda e: page.go("/catalog")),
+        ft.Row([
+            ft.ElevatedButton("Notifiche", on_click=lambda e: page.go("/notifications")),
+            badge
+        ]),
+        ft.ElevatedButton("Storico", on_click=lambda e: page.go("/history")),
     ]
 
     if user_role in ["RESPONSABILE", "SEGRETERIA"]:
-        menu_items.append(menu_button("Storico", ft.icons.HISTORY, "/history"))
-        menu_items.append(menu_button("Noleggi/Vendite", ft.icons.SWAP_HORIZ, "/rental_sale"))
-
+        buttons.append(ft.ElevatedButton("Noleggi/Vendite", on_click=lambda e: page.go("/rental_sale")))
     if user_role == "RESPONSABILE":
-        menu_items.append(menu_button("Gestione Dipendenti", ft.icons.GROUP, "/user_management"))
-
+        buttons.append(ft.ElevatedButton("Gestione Dipendenti", on_click=lambda e: page.go("/user_management")))
     if user_role in ["RESPONSABILE", "MAGAZZINIERE"]:
-        menu_items.append(menu_button("Danni", ft.icons.REPORT, "/damage_report"))
+        buttons.append(ft.ElevatedButton("Danni", on_click=lambda e: page.go("/damage_report")))
 
     return ft.Container(
-        content=ft.Column(menu_items, spacing=10),
-        width=220,
-        bgcolor=ft.colors.BLUE_700,
-        padding=15,
-        border_radius=10,
-        shadow=ft.BoxShadow(
-            spread_radius=1,
-            blur_radius=8,
-            color=ft.colors.with_opacity(0.25, ft.colors.BLACK),
-            offset=ft.Offset(0, 4)
-        )
+        content=ft.Column([
+            ft.Text(user_name, size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+            ft.Text(f"Ruolo: {user_role}", size=14, color=ft.Colors.WHITE),
+            ft.Divider(height=10, color=ft.Colors.WHITE),
+            *buttons
+        ], spacing=10),
+        bgcolor="#1e90ff",
+        padding=20,
+        width=200,
+        border_radius=10
     )
