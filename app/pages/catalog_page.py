@@ -18,7 +18,7 @@ def catalog_page(page: ft.Page):
         danneggiati = count_damages_for_product(db, p.id)
         disponibili = max(0, p.quantita - danneggiati)
         stato = f"Disponibile ({disponibili}/{p.quantita})" if disponibili > 0 else f"NON disponibile ({danneggiati} danneggiati)"
-        colore = ft.colors.WHITE if disponibili > 0 else ft.colors.with_opacity(0.2, ft.colors.RED)
+        colore = ft.Colors.WHITE if disponibili > 0 else ft.Colors.with_opacity(0.2, ft.Colors.RED)
         product_list.append(
             ft.Container(
                 content=ft.Row([
@@ -26,17 +26,26 @@ def catalog_page(page: ft.Page):
                         ft.Text(f"{p.nome} ({p.categoria})", size=16, weight=ft.FontWeight.BOLD),
                         ft.Text(stato, size=14)
                     ]),
-                    ft.ElevatedButton("Dettagli", on_click=lambda e, pid=p.id: page.go(f"/product_detail?product_id={pid}"),
-                                      disabled=disponibili == 0)
+                    ft.ElevatedButton("Dettagli",
+                                      on_click=lambda e, pid=p.id: page.go(f"/product_detail?product_id={pid}"),
+                                      disabled=False)
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                 padding=10, bgcolor=colore, border_radius=10,
-                shadow=ft.BoxShadow(spread_radius=1, blur_radius=5, color=ft.colors.with_opacity(0.2, ft.colors.BLACK))
+                shadow=ft.BoxShadow(spread_radius=1, blur_radius=5,
+                                    color=ft.Colors.with_opacity(0.2, ft.Colors.BLACK))
             )
         )
     db.close()
 
+    buttons = []
+    if page.session.get("user_role") in ["RESPONSABILE", "MAGAZZINIERE"]:
+        buttons.append(ft.ElevatedButton("➕ Aggiungi Prodotto",
+                                         on_click=lambda e: page.go("/add_edit_product"),
+                                         width=250))
+
     content = ft.Column([
         ft.Text("Catalogo Prodotti", size=30, weight=ft.FontWeight.BOLD),
+        *buttons,
         ft.Column(product_list, spacing=10, scroll=ft.ScrollMode.AUTO)
     ], spacing=20)
 
@@ -46,8 +55,9 @@ def catalog_page(page: ft.Page):
         controls=[
             ft.Row([
                 build_menu(page),
-                ft.Container(content=content, expand=True, bgcolor=ft.colors.WHITE, padding=30, border_radius=15,
-                             shadow=ft.BoxShadow(spread_radius=1, blur_radius=8, color=ft.colors.with_opacity(0.25, ft.colors.BLACK)))
+                ft.Container(content=content, expand=True, bgcolor=ft.Colors.WHITE, padding=30, border_radius=15,
+                             shadow=ft.BoxShadow(spread_radius=1, blur_radius=8,
+                                                 color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK)))
             ], expand=True)
         ]
     )
