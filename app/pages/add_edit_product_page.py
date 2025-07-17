@@ -18,19 +18,11 @@ def add_edit_product_page(page: ft.Page):
         product_id = None
 
     prodotto = None
-    error_message = None
-
     if product_id:
-        try:
-            db = SessionLocal()
-            prodotto = get_product_by_id(db, int(product_id))
-            db.close()
-            if not prodotto:
-                error_message = f"❌ Prodotto con ID {product_id} non trovato!"
-        except Exception as e:
-            error_message = f"❌ Errore nel recupero del prodotto: {str(e)}"
+        db = SessionLocal()
+        prodotto = get_product_by_id(db, int(product_id))
+        db.close()
 
-    # ✅ Campi
     nome_field = ft.TextField(label="Nome", value=prodotto.nome if prodotto else "", width=300)
     categoria_field = ft.TextField(label="Categoria", value=prodotto.categoria if prodotto else "", width=300)
     quantita_field = ft.TextField(label="Quantità", value=str(prodotto.quantita) if prodotto else "", width=300,
@@ -42,7 +34,7 @@ def add_edit_product_page(page: ft.Page):
 
     def handle_save(e):
         if not nome_field.value or not categoria_field.value or not quantita_field.value:
-            message_text.value = "⚠️ Tutti i campi obbligatori (Nome, Categoria e Quantità) devono essere compilati!"
+            message_text.value = "⚠️ Nome, Categoria e Quantità sono obbligatori!"
             message_text.color = "red"
             page.update()
             return
@@ -50,22 +42,26 @@ def add_edit_product_page(page: ft.Page):
         db = SessionLocal()
         try:
             if prodotto:
-                prodotto.nome = nome_field.value
-                prodotto.categoria = categoria_field.value
-                prodotto.quantita = int(quantita_field.value)
-                prodotto.modello = modello_field.value if modello_field.value else None
-                prodotto.dimensione = dimensione_field.value if dimensione_field.value else None
-                prodotto.brand = brand_field.value if brand_field.value else None
-                db.commit()
-                message_text.value = f"✅ Prodotto '{prodotto.nome}' aggiornato!"
+                # ✅ Ricarichiamo l'oggetto nella sessione attuale
+                prodotto_db = get_product_by_id(db, prodotto.id)
+                if prodotto_db:
+                    prodotto_db.nome = nome_field.value
+                    prodotto_db.categoria = categoria_field.value
+                    prodotto_db.quantita = int(quantita_field.value)
+                    prodotto_db.modello = modello_field.value or None
+                    prodotto_db.dimensione = dimensione_field.value or None
+                    prodotto_db.brand = brand_field.value or None
+                    db.commit()
+                    db.refresh(prodotto_db)
+                    message_text.value = f"✅ Prodotto '{prodotto_db.nome}' aggiornato!"
             else:
                 nuovo = create_product(db, ProductCreate(
                     nome=nome_field.value,
                     categoria=categoria_field.value,
                     quantita=int(quantita_field.value),
-                    modello=modello_field.value if modello_field.value else None,
-                    dimensione=dimensione_field.value if dimensione_field.value else None,
-                    brand=brand_field.value if brand_field.value else None
+                    modello=modello_field.value or None,
+                    dimensione=dimensione_field.value or None,
+                    brand=brand_field.value or None
                 ))
                 message_text.value = f"✅ Prodotto '{nuovo.nome}' aggiunto!"
             message_text.color = "green"
@@ -74,27 +70,17 @@ def add_edit_product_page(page: ft.Page):
             message_text.color = "red"
         finally:
             db.close()
+
         page.update()
 
-    content_controls = [
+    content = ft.Column([
         ft.Text("Aggiungi / Modifica Prodotto", size=30, weight=ft.FontWeight.BOLD),
-    ]
-
-    if error_message:
-        content_controls.append(ft.Text(error_message, size=16, color="red"))
-    else:
-        content_controls.extend([
-            nome_field, categoria_field, quantita_field,
-            modello_field, dimensione_field, brand_field,
-            ft.ElevatedButton("Salva", on_click=handle_save, width=250),
-            message_text
-        ])
-
-    content_controls.append(
+        nome_field, categoria_field, quantita_field,
+        modello_field, dimensione_field, brand_field,
+        ft.ElevatedButton("Salva", on_click=handle_save, width=250),
+        message_text,
         ft.ElevatedButton("⬅ Torna al Catalogo", on_click=lambda e: page.go("/catalog"), width=250)
-    )
-
-    content = ft.Column(content_controls, spacing=15)
+    ], spacing=15)
 
     return ft.View(
         route="/add_edit_product",

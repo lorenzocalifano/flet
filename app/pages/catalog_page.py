@@ -12,19 +12,36 @@ def catalog_page(page: ft.Page):
     prodotti = get_all_products(db)
     db.close()
 
+    # ✅ Opzioni filtri
+    categorie = sorted({p.categoria for p in prodotti if p.categoria})
+    modelli = sorted({p.modello for p in prodotti if p.modello})
+    dimensioni = sorted({p.dimensione for p in prodotti if p.dimensione})
+    brands = sorted({p.brand for p in prodotti if p.brand})
+
+    categoria_filter = ft.Dropdown(label="Categoria", options=[ft.dropdown.Option(c) for c in categorie], width=200)
+    modello_filter = ft.Dropdown(label="Modello", options=[ft.dropdown.Option(m) for m in modelli], width=200)
+    dimensione_filter = ft.Dropdown(label="Dimensione", options=[ft.dropdown.Option(d) for d in dimensioni], width=200)
+    brand_filter = ft.Dropdown(label="Brand", options=[ft.dropdown.Option(b) for b in brands], width=200)
+
     product_list_column = ft.Column(spacing=10, scroll=ft.ScrollMode.AUTO, expand=True)
 
-    def refresh_list():
+    def refresh_list(e=None):
         db = SessionLocal()
         prodotti_refreshed = get_all_products(db)
         db.close()
 
         product_list_column.controls.clear()
         for p in prodotti_refreshed:
-            db2 = SessionLocal()
-            danneggiati = count_damages_for_product(db2, p.id)
-            db2.close()
+            if categoria_filter.value and p.categoria != categoria_filter.value:
+                continue
+            if modello_filter.value and p.modello != modello_filter.value:
+                continue
+            if dimensione_filter.value and p.dimensione != dimensione_filter.value:
+                continue
+            if brand_filter.value and p.brand != brand_filter.value:
+                continue
 
+            danneggiati = count_damages_for_product(SessionLocal(), p.id)
             disponibili = max(0, p.quantita - danneggiati)
             stato = f"{disponibili}/{p.quantita} disponibili (danneggiati: {danneggiati})"
             color = ft.Colors.WHITE if disponibili > 0 else ft.Colors.with_opacity(0.1, ft.Colors.RED)
@@ -47,24 +64,28 @@ def catalog_page(page: ft.Page):
             )
         page.update()
 
+    # ✅ Collegamento eventi filtri
+    for f in [categoria_filter, modello_filter, dimensione_filter, brand_filter]:
+        f.on_change = refresh_list
+
     refresh_list()
 
-    # ✅ Bottone flottante
+    # ✅ Floating button
     floating_button = None
     if page.session.get("user_role") in ["RESPONSABILE", "MAGAZZINIERE"]:
-        floating_button = ft.FloatingActionButton(
-            icon=ft.Icons.ADD,
-            bgcolor=ft.Colors.BLUE,
-            on_click=lambda e: page.go("/add_edit_product")
+        floating_button = ft.Container(
+            content=ft.FloatingActionButton(icon=ft.Icons.ADD, bgcolor=ft.Colors.BLUE, on_click=lambda e: page.go("/add_edit_product")),
+            right=30, bottom=30
         )
 
     content = ft.Stack([
         ft.Column([
             ft.Text("Catalogo Prodotti", size=30, weight=ft.FontWeight.BOLD),
+            ft.Row([categoria_filter, modello_filter, dimensione_filter, brand_filter], spacing=10),
             product_list_column
         ], spacing=20, expand=True),
         floating_button if floating_button else ft.Container()
-    ])
+    ], expand=True)
 
     return ft.View(
         route="/catalog",
@@ -78,11 +99,7 @@ def catalog_page(page: ft.Page):
                     bgcolor=ft.Colors.WHITE,
                     padding=30,
                     border_radius=15,
-                    shadow=ft.BoxShadow(
-                        spread_radius=1,
-                        blur_radius=8,
-                        color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK)
-                    )
+                    shadow=ft.BoxShadow(spread_radius=1, blur_radius=8, color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK))
                 )
             ], expand=True)
         ]
