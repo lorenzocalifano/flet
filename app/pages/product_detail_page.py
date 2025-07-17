@@ -8,33 +8,77 @@ def product_detail_page(page: ft.Page):
     page.theme = ft.Theme(font_family="Montserrat")
     page.update()
 
-    product_id = int(page.query.get("product_id"))
+    try:
+        product_id = page.query.get("product_id")
+    except:
+        product_id = None
+
+    if not product_id:
+        return ft.View(
+            route="/product_detail",
+            bgcolor="#1e90ff",
+            controls=[
+                ft.Row([
+                    build_menu(page),
+                    ft.Container(
+                        content=ft.Text("❌ Prodotto non trovato!", size=20, color="red"),
+                        expand=True,
+                        bgcolor=ft.Colors.WHITE,
+                        padding=30,
+                        border_radius=15
+                    )
+                ], expand=True)
+            ]
+        )
+
     db = SessionLocal()
-    prodotto = get_product_by_id(db, product_id)
-    danneggiati = count_damages_for_product(db, product_id)
+    prodotto = get_product_by_id(db, int(product_id))
+    danneggiati = count_damages_for_product(db, int(product_id))
     db.close()
 
+    if not prodotto:
+        return ft.View(
+            route="/product_detail",
+            bgcolor="#1e90ff",
+            controls=[
+                ft.Row([
+                    build_menu(page),
+                    ft.Container(
+                        content=ft.Text("❌ Prodotto non trovato!", size=20, color="red"),
+                        expand=True,
+                        bgcolor=ft.Colors.WHITE,
+                        padding=30,
+                        border_radius=15
+                    )
+                ], expand=True)
+            ]
+        )
+
     disponibili = max(0, prodotto.quantita - danneggiati)
+    stato = f"{disponibili}/{prodotto.quantita} disponibili (danneggiati: {danneggiati})"
+
+    dettagli = ft.Column([
+        ft.Text(f"Nome: {prodotto.nome}", size=18, weight=ft.FontWeight.BOLD),
+        ft.Text(f"Categoria: {prodotto.categoria}", size=16),
+        ft.Text(f"Modello: {prodotto.modello or 'N/A'}", size=16),
+        ft.Text(f"Dimensione: {prodotto.dimensione or 'N/A'}", size=16),
+        ft.Text(f"Brand: {prodotto.brand or 'N/A'}", size=16),
+        ft.Text(f"Stato: {stato}", size=16)
+    ], spacing=8)
+
+    buttons = []
+    if page.session.get("user_role") in ["RESPONSABILE", "MAGAZZINIERE"]:
+        buttons.append(
+            ft.ElevatedButton("Modifica Prodotto", width=250,
+                              on_click=lambda e: page.go(f"/add_edit_product?product_id={prodotto.id}"))
+        )
 
     content = ft.Column([
         ft.Text("Dettaglio Prodotto", size=30, weight=ft.FontWeight.BOLD),
-        ft.Text(f"Nome: {prodotto.nome}", size=18),
-        ft.Text(f"Categoria: {prodotto.categoria}", size=16),
-        ft.Text(f"Quantità totale: {prodotto.quantita}", size=16),
-        ft.Text(f"Disponibili: {disponibili} / {prodotto.quantita}",
-                size=16, color=ft.Colors.GREEN if disponibili > 0 else ft.Colors.RED),
-        ft.ElevatedButton("Torna al Catalogo", on_click=lambda e: page.go("/catalog"), width=250)
-    ], spacing=10)
-
-    # ✅ Pulsante Modifica solo per Responsabile/Magazziniere
-    if page.session.get("user_role") in ["RESPONSABILE", "MAGAZZINIERE"]:
-        content.controls.append(
-            ft.ElevatedButton(
-                "✏️ Modifica Prodotto",
-                on_click=lambda e: page.go(f"/add_edit_product?product_id={product_id}"),
-                width=250
-            )
-        )
+        dettagli,
+        *buttons,
+        ft.ElevatedButton("⬅ Torna al Catalogo", on_click=lambda e: page.go("/catalog"), width=250)
+    ], spacing=15)
 
     return ft.View(
         route="/product_detail",
@@ -42,9 +86,18 @@ def product_detail_page(page: ft.Page):
         controls=[
             ft.Row([
                 build_menu(page),
-                ft.Container(content=content, expand=True, bgcolor=ft.Colors.WHITE, padding=30, border_radius=15,
-                             shadow=ft.BoxShadow(spread_radius=1, blur_radius=8,
-                                                 color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK)))
+                ft.Container(
+                    content=content,
+                    expand=True,
+                    bgcolor=ft.Colors.WHITE,
+                    padding=30,
+                    border_radius=15,
+                    shadow=ft.BoxShadow(
+                        spread_radius=1,
+                        blur_radius=8,
+                        color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK)
+                    )
+                )
             ], expand=True)
         ]
     )
