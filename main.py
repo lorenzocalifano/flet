@@ -25,6 +25,13 @@ from app.models import *
 from app.services.auth_service import register_user
 from app.schemas.user_schema import UserCreate, UserRole
 
+# Resetta e popola il database con dati fake
+from populate_database import populate
+
+if not os.path.exists("app.db"):
+    print("Primo avvio: creazione e popolamento database...")
+    populate()  # Funzione che esegue il popolamento
+
 def main(page: ft.Page):
     # Impostazioni Grafiche Globali
     page.title = "Gestionale Magazzino"

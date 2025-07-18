@@ -30,3 +30,9 @@ temp/
 
 # Config temporanei
 .DS_Store
+Thumbs.db
+
+# File generati da PyInstaller (eseguibili)
+dist/
+build/
+*.spec

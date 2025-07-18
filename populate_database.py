@@ -17,13 +17,15 @@ from app.schemas.damage_schema import DamageCreate
 
 fake = Faker("it_IT")
 
-# ✅ Ricrea tabelle se non esistono
-Base.metadata.create_all(bind=engine)
-db = SessionLocal()
 
-# ✅ RESET DB (opzionale)
-RESET = True
-if RESET:
+def populate():
+    """Popola il database con dati fittizi per i test"""
+    # Ricrea tabelle se non esistono
+    Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+
+    # Reset completo database solo al primo avvio
+    print("Pulizia database...")
     db.execute(text("DELETE FROM notifications"))
     db.execute(text("DELETE FROM damages"))
     db.execute(text("DELETE FROM rentals"))
@@ -32,105 +34,96 @@ if RESET:
     db.execute(text("DELETE FROM users"))
     db.commit()
 
-# ✅ 1. CREA 20 UTENTI
-ruoli = [UserRole.RESPONSABILE, UserRole.SEGRETERIA, UserRole.MAGAZZINIERE]
-for i in range(20):
-    ruolo = random.choice(ruoli)
-    register_user(
-        db,
-        UserCreate(
-            nome=fake.first_name(),
-            cognome=fake.last_name(),
-            email=fake.unique.email(),
-            password="123456",
-            ruolo=ruolo
+    print("Creazione utenti di test...")
+    ruoli = [UserRole.RESPONSABILE, UserRole.SEGRETERIA, UserRole.MAGAZZINIERE]
+    for i in range(20):
+        ruolo = random.choice(ruoli)
+        email = fake.unique.email()
+        user = register_user(
+            db,
+            UserCreate(
+                nome=fake.first_name(),
+                cognome=fake.last_name(),
+                email=email,
+                password="123456",
+                ruolo=ruolo
+            )
         )
-    )
+        print(f"{ruolo.value.upper()} -> {email} / 123456")
 
-# ✅ 2. CREA 50 PRODOTTI
-categorie = ["Audio", "Luci", "Video", "Strumenti Musicali", "Accessori"]
-modelli = ["Pro", "Max", "Lite", "X-Series", "MK2"]
-dimensioni = ["Piccolo", "Medio", "Grande"]
-brands = ["Yamaha", "Sony", "Behringer", "JBL", "Roland"]
+    print("Creazione prodotti...")
+    categorie = ["Audio", "Luci", "Video", "Strumenti Musicali", "Accessori"]
+    modelli = ["Pro", "Max", "Lite", "X-Series", "MK2"]
+    dimensioni = ["Piccolo", "Medio", "Grande"]
+    brands = ["Yamaha", "Sony", "Behringer", "JBL", "Roland"]
 
-prodotti_creati = []
-for _ in range(50):
-    p = create_product(db, ProductCreate(
-        nome=fake.word().capitalize(),
-        categoria=random.choice(categorie),
-        quantita=random.randint(5, 30),
-        modello=random.choice(modelli),
-        dimensione=random.choice(dimensioni),
-        brand=random.choice(brands)
-    ))
-    prodotti_creati.append(p)
+    prodotti_creati = []
+    for _ in range(50):
+        p = create_product(db, ProductCreate(
+            nome=fake.word().capitalize(),
+            categoria=random.choice(categorie),
+            quantita=random.randint(5, 30),
+            modello=random.choice(modelli),
+            dimensione=random.choice(dimensioni),
+            brand=random.choice(brands)
+        ))
+        prodotti_creati.append(p)
 
-# ✅ 3. CREA 30 NOLEGGI
-for _ in range(30):
-    prodotto = random.choice(prodotti_creati)
-    quantita = random.randint(1, min(5, prodotto.quantita))
-    start_date = fake.date_this_year()
-    end_date = start_date + timedelta(days=random.randint(1, 10))
-    cliente = fake.name()
-    metodo = random.choice(["contanti", "paypal", "carta di credito"])
+    print("Creazione noleggi...")
+    for _ in range(30):
+        prodotto = random.choice(prodotti_creati)
+        quantita = random.randint(1, min(5, prodotto.quantita))
+        start_date = fake.date_this_year()
+        end_date = start_date + timedelta(days=random.randint(1, 10))
+        cliente = fake.name()
+        metodo = random.choice(["contanti", "paypal", "carta di credito"])
 
-    create_rental(db, RentalCreate(
-        prodotto_id=prodotto.id,
-        quantita=quantita,
-        cliente=cliente,
-        data_inizio=start_date,
-        data_fine=end_date,
-        stato=random.choice(["in corso", "concluso"]),
-        metodo_pagamento=metodo
-    ))
+        create_rental(db, RentalCreate(
+            prodotto_id=prodotto.id,
+            quantita=quantita,
+            cliente=cliente,
+            data_inizio=start_date,
+            data_fine=end_date,
+            stato=random.choice(["in corso", "concluso"]),
+            metodo_pagamento=metodo
+        ))
 
-# ✅ 4. CREA 20 VENDITE
-for _ in range(20):
-    prodotto = random.choice(prodotti_creati)
-    quantita = random.randint(1, min(3, prodotto.quantita))
-    cliente = fake.name()
-    metodo = random.choice(["contanti", "paypal", "carta di credito"])
-    create_sale(db, SaleCreate(
-        prodotto_id=prodotto.id,
-        quantita=quantita,
-        cliente=cliente,
-        data_vendita=fake.date_this_year(),
-        stato=random.choice(["concluso", "annullato"]),
-        metodo_pagamento=metodo
-    ))
+    print("Creazione vendite...")
+    for _ in range(20):
+        prodotto = random.choice(prodotti_creati)
+        quantita = random.randint(1, min(3, prodotto.quantita))
+        cliente = fake.name()
+        metodo = random.choice(["contanti", "paypal", "carta di credito"])
+        create_sale(db, SaleCreate(
+            prodotto_id=prodotto.id,
+            quantita=quantita,
+            cliente=cliente,
+            data_vendita=fake.date_this_year(),
+            stato=random.choice(["confermato", "annullato"]),
+            metodo_pagamento=metodo
+        ))
 
-# ✅ 5. CREA 10 DANNI
-for _ in range(10):
-    prodotto = random.choice(prodotti_creati)
-    report_damage(db, DamageCreate(
-        prodotto_id=prodotto.id,
-        descrizione=fake.sentence(nb_words=6),
-        data_segnalazione=datetime.now().date()
-    ))
+    print("Segnalazione danni...")
+    for _ in range(10):
+        prodotto = random.choice(prodotti_creati)
+        report_damage(db, DamageCreate(
+            prodotto_id=prodotto.id,
+            descrizione=fake.sentence(nb_words=6),
+            data_segnalazione=datetime.now().date()
+        ))
 
-# ✅ 6. CREA 10 NOTIFICHE MANUALI
-for _ in range(10):
-    create_notification(
-        db,
-        messaggio=fake.sentence(nb_words=8),
-        tipo=random.choice(["generale", "avviso"]),
-        operazione_id=random.choice(prodotti_creati).id
-    )
-
-db.close()
-print("✅ Database popolato con successo!")
-
-for i in range(20):
-    ruolo = random.choice(ruoli)
-    email = fake.unique.email()
-    user = register_user(
-        db,
-        UserCreate(
-            nome=fake.first_name(),
-            cognome=fake.last_name(),
-            email=email,
-            password="123456",  # usiamo sempre la stessa password per i test
-            ruolo=ruolo
+    print("Creazione notifiche manuali...")
+    for _ in range(10):
+        create_notification(
+            db,
+            messaggio=fake.sentence(nb_words=8),
+            tipo=random.choice(["generale", "avviso"]),
+            operazione_id=random.choice(prodotti_creati).id
         )
-    )
-    print(f"{ruolo.value.upper()} -> {email} / 123456")
+
+    db.close()
+    print("✅ Database popolato con successo!")
+
+
+if __name__ == "__main__":
+    populate()
