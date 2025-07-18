@@ -122,7 +122,7 @@ def populate():
         )
 
     db.close()
-    print("✅ Database popolato con successo!")
+    print("Database popolato con successo!")
 
 
 if __name__ == "__main__":
