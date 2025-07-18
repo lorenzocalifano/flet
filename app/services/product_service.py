@@ -2,10 +2,8 @@ from sqlalchemy.orm import Session
 from app.models.product import Product
 from app.schemas.product_schema import ProductCreate
 
-# === SERVIZI PER LA GESTIONE PRODOTTI ===
 def create_product(db: Session, product: ProductCreate):
     # crea un nuovo prodotto nel db
-    # TODO: forse dovremmo controllare se esiste già un prodotto con lo stesso nome
     nuovo = Product(
         nome=product.nome,
         categoria=product.categoria,

@@ -4,8 +4,6 @@ from app.utils.security import hash_password, verify_password
 from app.schemas.user_schema import UserCreate
 from sqlalchemy.exc import IntegrityError
 
-# === SERVIZI DI AUTENTICAZIONE ===
-
 def register_user(db: Session, user_data: UserCreate):
     # registra un nuovo utente nel database
     new_user = User(

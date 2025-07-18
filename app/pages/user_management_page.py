@@ -6,15 +6,28 @@ from app.utils.menu_builder import build_menu
 from app.utils.header_builder import build_header
 
 def user_management_page(page: ft.Page):
+    # Impostazione Tema
     page.theme = ft.Theme(font_family="Montserrat")
     page.update()
 
-    # Accesso consentito solo al responsabile
+    # Controllo Accesso Solo Per Responsabili
     if page.session.get("user_role") != "RESPONSABILE":
-        page.go("/dashboard")
-        return
+        return ft.View(
+            route="/user_management",
+            controls=[
+                ft.Row([
+                    build_menu(page),
+                    ft.Container(
+                        content=ft.Text("Utente non autorizzato", size=22, color="red", weight=ft.FontWeight.BOLD),
+                        expand=True,
+                        bgcolor=ft.Colors.WHITE,
+                        alignment=ft.alignment.center
+                    )
+                ], expand=True)
+            ]
+        )
 
-    # Campi per aggiungere un nuovo dipendente
+    # Campi Input Per Aggiungere Nuovo Dipendente
     nome_field = ft.TextField(label="Nome", width=200)
     cognome_field = ft.TextField(label="Cognome", width=200)
     email_field = ft.TextField(label="Email", width=200)
@@ -26,10 +39,10 @@ def user_management_page(page: ft.Page):
     )
     message_text = ft.Text("", size=14, color="green")
 
-    # Contenitore per la lista degli utenti
+    # Lista Dipendenti
     user_list_column = ft.Column(spacing=10, scroll=ft.ScrollMode.AUTO, expand=True)
 
-    # Funzione per ricaricare la lista degli utenti
+    # Funzione Aggiornamento Lista Dipendenti
     def refresh_list():
         db = SessionLocal()
         utenti = get_all_users(db)
@@ -37,27 +50,25 @@ def user_management_page(page: ft.Page):
         user_list_column.controls.clear()
 
         for u in utenti:
+            # Ruolo Non Modificabile → Lo Mostriamo Solo Come Testo
+            role_label = ft.Text(f"Ruolo: {u.ruolo.name}", size=12, color="black")
+
             delete_btn = ft.IconButton(
                 icon=ft.Icons.DELETE,
                 icon_color=ft.Colors.RED,
                 on_click=lambda e, uid=u.id: handle_delete(uid)
             )
+
             user_list_column.controls.append(
                 ft.Container(
-                    content=ft.Row(
-                        [
-                            ft.Column(
-                                [
-                                    ft.Text(f"{u.nome} {u.cognome}", size=14, weight=ft.FontWeight.BOLD),
-                                    ft.Text(f"Email: {u.email}", size=12, italic=True),
-                                    ft.Text(f"Ruolo: {u.ruolo.name}", size=12, color=ft.Colors.BLUE)
-                                ],
-                                expand=True
-                            ),
-                            delete_btn
-                        ],
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN
-                    ),
+                    content=ft.Row([
+                        ft.Column([
+                            ft.Text(f"{u.nome} {u.cognome}", size=14, weight=ft.FontWeight.BOLD),
+                            ft.Text(f"Email: {u.email}", size=12, italic=True),
+                            role_label
+                        ], expand=True),
+                        delete_btn
+                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                     padding=10,
                     bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.GREY),
                     border_radius=8
@@ -65,7 +76,7 @@ def user_management_page(page: ft.Page):
             )
         page.update()
 
-    # Funzione per aggiungere un nuovo dipendente
+    # Funzione Aggiunta Dipendente
     def handle_add(e):
         if not nome_field.value or not cognome_field.value or not email_field.value or not password_field.value or not ruolo_dropdown.value:
             message_text.value = "Tutti i campi sono obbligatori."
@@ -83,17 +94,17 @@ def user_management_page(page: ft.Page):
                 message_text.value = f"Dipendente {nome_field.value} aggiunto con successo!"
                 message_text.color = "green"
                 refresh_list()
-            except ValueError as ve:  # <-- intercettiamo l'errore già gestito dal service
-                message_text.value = str(ve)  # es: "Email già registrata"
+            except ValueError as ve:
+                message_text.value = str(ve)  # Es: "Email già registrata"
                 message_text.color = "red"
-            except Exception as ex:  # <-- in caso di altri errori inattesi
+            except Exception as ex:
                 message_text.value = f"Errore: {str(ex)}"
                 message_text.color = "red"
             finally:
                 db.close()
         page.update()
 
-    # Funzione per eliminare un dipendente
+    # Funzione Eliminazione Dipendente
     def handle_delete(user_id):
         db = SessionLocal()
         try:
@@ -102,45 +113,38 @@ def user_management_page(page: ft.Page):
         finally:
             db.close()
 
+    # Prima Chiamata Per Popolare La Lista
     refresh_list()
 
-    # Composizione dei controlli principali
-    content = ft.Column(
-        [
-            build_header(page, "Gestione Dipendenti"),
-            ft.Row([nome_field, cognome_field, email_field, password_field, ruolo_dropdown],
-                   alignment=ft.MainAxisAlignment.START, spacing=10),
-            ft.ElevatedButton("Aggiungi Dipendente", on_click=handle_add),
-            message_text,
-            ft.Text("Lista Dipendenti", size=20, weight=ft.FontWeight.BOLD),
-            user_list_column
-        ],
-        spacing=15,
-        expand=True
-    )
+    # Layout Pagina
+    content = ft.Column([
+        build_header(page, "Gestione Dipendenti"),
+        ft.Row([nome_field, cognome_field, email_field, password_field, ruolo_dropdown],
+               alignment=ft.MainAxisAlignment.START, spacing=10),
+        ft.ElevatedButton("Aggiungi Dipendente", on_click=handle_add),
+        message_text,
+        ft.Text("Lista Dipendenti", size=20, weight=ft.FontWeight.BOLD),
+        user_list_column
+    ], spacing=15, expand=True)
 
-    # View finale
     return ft.View(
         route="/user_management",
         bgcolor="#f5f5f5",
         controls=[
-            ft.Row(
-                [
-                    build_menu(page),
-                    ft.Container(
-                        content=content,
-                        expand=True,
-                        bgcolor=ft.Colors.WHITE,
-                        padding=30,
-                        border_radius=15,
-                        shadow=ft.BoxShadow(
-                            spread_radius=1,
-                            blur_radius=8,
-                            color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK)
-                        )
+            ft.Row([
+                build_menu(page),
+                ft.Container(
+                    content=content,
+                    expand=True,
+                    bgcolor=ft.Colors.WHITE,
+                    padding=30,
+                    border_radius=15,
+                    shadow=ft.BoxShadow(
+                        spread_radius=1,
+                        blur_radius=8,
+                        color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK)
                     )
-                ],
-                expand=True
-            )
+                )
+            ], expand=True)
         ]
     )
