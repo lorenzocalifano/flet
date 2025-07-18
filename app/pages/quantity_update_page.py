@@ -7,6 +7,27 @@ def quantity_update_page(page: ft.Page):
     page.theme = ft.Theme(font_family="Montserrat")
     page.update()
 
+    if page.session.get("user_name") == "Utente" or page.session.get("user_role") == "N/A":
+        return ft.View(
+            route=page.route,
+            controls=[
+                ft.Row([
+                    build_menu(page),
+                    ft.Container(
+                        content=ft.Text(
+                            "⛔ Utente non autorizzato",
+                            size=22,
+                            color=ft.Colors.RED,
+                            weight=ft.FontWeight.BOLD
+                        ),
+                        expand=True,
+                        bgcolor=ft.Colors.WHITE,
+                        alignment=ft.alignment.center
+                    )
+                ], expand=True)
+            ]
+        )
+
     if page.session.get("user_role") not in ["RESPONSABILE", "MAGAZZINIERE"]:
         page.go("/dashboard")
         return

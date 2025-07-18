@@ -10,12 +10,25 @@ def user_management_page(page: ft.Page):
     page.theme = ft.Theme(font_family="Montserrat")
     page.update()
 
-    if page.session.get("user_role") != "RESPONSABILE":
+    if page.session.get("user_name") == "Utente" or page.session.get("user_role") == "N/A":
         return ft.View(
-            route="/user_management",
-            bgcolor="#f5f5f5",
-            controls=[ft.Row([ft.Text("Utente non autorizzato", size=22, color="red", weight=ft.FontWeight.BOLD)],
-                             alignment=ft.MainAxisAlignment.CENTER)]
+            route=page.route,
+            controls=[
+                ft.Row([
+                    build_menu(page),
+                    ft.Container(
+                        content=ft.Text(
+                            "⛔ Utente non autorizzato",
+                            size=22,
+                            color=ft.Colors.RED,
+                            weight=ft.FontWeight.BOLD
+                        ),
+                        expand=True,
+                        bgcolor=ft.Colors.WHITE,
+                        alignment=ft.alignment.center
+                    )
+                ], expand=True)
+            ]
         )
 
     # controllo permessi: solo il responsabile può accedere qui
