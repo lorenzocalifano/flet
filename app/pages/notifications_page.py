@@ -28,8 +28,10 @@ def notifications_page(page: ft.Page):
 
     # Recupero Notifiche
     db = SessionLocal()
-    notifiche = get_all_notifications(db)
-    db.close()
+    try:
+        notifiche = get_all_notifications(db)
+    finally:
+        db.close()
 
     notifiche_list = []
     for n in notifiche:

@@ -38,8 +38,10 @@ def user_management_page(page: ft.Page):
 
     # prendo subito gli utenti
     db = SessionLocal()
-    utenti = get_all_users(db)
-    db.close()
+    try:
+        utenti = get_all_users(db)
+    finally:
+        db.close()
 
     # campi per aggiungere nuovo dipendente
     nome_field = ft.TextField(label="Nome", width=200)
@@ -56,11 +58,12 @@ def user_management_page(page: ft.Page):
     # colonna scrollabile con la lista degli utenti (se sono tanti, non blocca la pagina)
     user_list_column = ft.Column(spacing=10, scroll=ft.ScrollMode.AUTO, expand=True)
 
-    # === FUNZIONE PER RINFRESCARE LA LISTA ===
     def refresh_list():
         db = SessionLocal()
-        utenti = get_all_users(db)
-        db.close()
+        try:
+            utenti = get_all_users(db)
+        finally:
+            db.close()
 
         user_list_column.controls.clear()
 
