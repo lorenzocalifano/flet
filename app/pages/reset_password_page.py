@@ -1,70 +1,57 @@
 import flet as ft
 from app.models.database import SessionLocal
-from app.models.user import User
-import random, string
-from app.services.auth_service import hash_password
+from app.services.auth_service import register_user  # solo se usiamo reset reale, altrimenti non serve
+from app.utils.menu_builder import build_menu
 
 def reset_password_page(page: ft.Page):
+    # Tema coerente con il resto dell'app
     page.theme = ft.Theme(font_family="Montserrat")
     page.update()
 
     email_field = ft.TextField(label="Inserisci la tua email", width=300)
-    message_text = ft.Text("", size=16, color="green")
+    message_text = ft.Text("", size=14, color="red")
 
     def handle_reset(e):
-        db = SessionLocal()
-        utente = db.query(User).filter(User.email == email_field.value.strip()).first()
-        if not utente:
-            message_text.value = "❌ Nessun utente trovato con questa email."
+        if not email_field.value:
+            message_text.value = "Inserisci un'email valida."
             message_text.color = "red"
         else:
-            # Logica temporanea senza collegare il programma ad un servizio di invio mail a pagamento
-            nuova_password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
-            utente.password = hash_password(nuova_password)
-            db.commit()
-            message_text.value = f"✅ Password resettata! Nuova password temporanea: {nuova_password}"
+            # Qui possiamo mettere logica reale di reset (email finta)
+            message_text.value = f"Se esiste un account per {email_field.value}, riceverai istruzioni per il reset."
             message_text.color = "green"
-        db.close()
         page.update()
+
+    # Contenuto centrale allineato come la pagina di login
+    content = ft.Container(
+        content=ft.Column(
+            [
+                ft.Text("Recupera Password", size=30, weight=ft.FontWeight.BOLD),
+                email_field,
+                ft.ElevatedButton("Resetta Password", on_click=handle_reset, width=250),
+                message_text,
+                ft.ElevatedButton("Torna al Login", on_click=lambda e: page.go("/"), width=250)
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            spacing=15
+        ),
+        alignment=ft.alignment.center,
+        padding=30,
+        width=400,
+        bgcolor=ft.Colors.WHITE,
+        border_radius=15,
+        shadow=ft.BoxShadow(
+            spread_radius=1,
+            blur_radius=8,
+            color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK),
+            offset=ft.Offset(0, 4)
+        )
+    )
 
     return ft.View(
         route="/reset_password",
-        bgcolor="#1e90ff",  # ✅ Sfondo pieno come login
-        controls=[
-            ft.Container(
-                expand=True,  # ✅ Riempie tutto lo sfondo
-                bgcolor="#1e90ff",
-                content=ft.Column(
-                    [
-                        ft.Container(
-                            content=ft.Column(
-                                [
-                                    ft.Text("Recupera Password", size=25, weight=ft.FontWeight.BOLD),
-                                    email_field,
-                                    ft.ElevatedButton("Resetta Password", on_click=handle_reset, width=250),
-                                    message_text,
-                                    ft.ElevatedButton("Torna al Login", on_click=lambda e: page.go("/"), width=250)
-                                ],
-                                alignment=ft.MainAxisAlignment.CENTER,
-                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                                spacing=10
-                            ),
-                            alignment=ft.alignment.center,
-                            padding=30,
-                            width=400,
-                            bgcolor=ft.colors.WHITE,
-                            border_radius=15,
-                            shadow=ft.BoxShadow(
-                                spread_radius=1,
-                                blur_radius=8,
-                                color=ft.colors.with_opacity(0.25, ft.colors.BLACK),
-                                offset=ft.Offset(0, 4)
-                            )
-                        )
-                    ],
-                    alignment=ft.MainAxisAlignment.CENTER,
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER
-                )
-            )
-        ]
+        vertical_alignment=ft.MainAxisAlignment.CENTER,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        bgcolor="#1e90ff",
+        controls=[content]
     )
