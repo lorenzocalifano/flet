@@ -10,6 +10,14 @@ def catalog_page(page: ft.Page):
     page.theme = ft.Theme(font_family="Montserrat")
     page.update()
 
+    if page.session.get("user_name") == "Utente" or page.session.get("user_role") == "N/A":
+        return ft.View(
+            route="/catalog",
+            bgcolor="#f5f5f5",
+            controls=[ft.Row([ft.Text("Utente non autorizzato", size=22, color="red", weight=ft.FontWeight.BOLD)],
+                             alignment=ft.MainAxisAlignment.CENTER)]
+        )
+
     # prendo tutti i prodotti una volta per creare i filtri
     db = SessionLocal()
     prodotti = get_all_products(db)

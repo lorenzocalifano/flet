@@ -9,6 +9,14 @@ def product_detail_page(page: ft.Page):
     page.theme = ft.Theme(font_family="Montserrat")
     page.update()
 
+    if page.session.get("user_name") == "Utente" or page.session.get("user_role") == "N/A":
+        return ft.View(
+            route="/product_detail",
+            bgcolor="#f5f5f5",
+            controls=[ft.Row([ft.Text("Utente non autorizzato", size=22, color="red", weight=ft.FontWeight.BOLD)],
+                             alignment=ft.MainAxisAlignment.CENTER)]
+        )
+
     # recupero product_id dalla querystring (TODO: forse va validato meglio)
     try:
         product_id = page.query.get("product_id")

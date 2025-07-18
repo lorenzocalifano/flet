@@ -1,11 +1,14 @@
 # === BASE IMAGE ===
 FROM python:3.11-slim
 
+# === EVITA PROBLEMI DI BUFFERING DEI LOG ===
+ENV PYTHONUNBUFFERED=1
+
 # === AMBIENTE DI LAVORO NEL CONTAINER ===
 WORKDIR /app
 
 # === COPIA FILE NECESSARI ===
-COPY requirements.txt requirements.txt
+COPY requirements.txt .
 
 # === INSTALLA LE DIPENDENZE ===
 RUN pip install --upgrade pip && \
@@ -17,5 +20,5 @@ COPY . .
 # === ESPONI LA PORTA USATA DA FLET ===
 EXPOSE 8550
 
-# === AVVIO DELL'APPLICAZIONE ===
-CMD ["flet", "run", "--web", "main.py", "--host", "0.0.0.0", "--port", "8550"]
+# === AVVIO DELL'APPLICAZIONE SOLO IN MODALITÀ WEB ===
+CMD ["python", "main.py"]

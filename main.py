@@ -1,6 +1,7 @@
+import os
 import flet as ft
 
-# === IMPORT DELLE PAGINE ===
+# Import Pagine
 from app.pages.login_page import login_page
 from app.pages.dashboard_page import dashboard_page
 from app.pages.catalog_page import catalog_page
@@ -15,16 +16,34 @@ from app.pages.notifications_page import notifications_page
 from app.pages.notification_detail_page import notification_detail_page
 from app.pages.reset_password_page import reset_password_page
 
-# === DATABASE E MODELLI ===
+# Database e Modelli
 from app.models.database import Base, engine, SessionLocal
 from app.models.user import User
 from app.models import *
 
-# === SERVICES E SCHEMAS ===
+# Servizi e Schemi
 from app.services.auth_service import register_user
 from app.schemas.user_schema import UserCreate, UserRole
 
-# === AVVIO APPLICAZIONE ===
+
+# Funzione per creare un utente di test solo se non esiste già
+def create_test_user_if_not_exists(db, nome, cognome, email, password, ruolo):
+    # Crea un utente di test solo se non esiste già con quella email.
+    if not db.query(User).filter(User.email == email).first():
+        register_user(
+            db,
+            UserCreate(
+                nome=nome,
+                cognome=cognome,
+                email=email,
+                password=password,
+                ruolo=ruolo
+            )
+        )
+        print(f"Utente di test creato: {email}")
+
+
+# main
 def main(page: ft.Page):
     # Impostazioni grafiche globali
     page.title = "Gestionale Magazzino"
@@ -36,33 +55,20 @@ def main(page: ft.Page):
     page.window_full_screen = False  # lasciamo solo massimizzata, non fullscreen
     page.update()
 
-    # === CREAZIONE DB E UTENTI DI TEST ===
+    # Creazione DB e utenti di test ===
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
-        if not db.query(User).first():
-            register_user(db, UserCreate(
-                nome="Mario", cognome="Rossi",
-                email="mario.rossi@test.com", password="123456",
-                ruolo=UserRole.RESPONSABILE
-            ))
-            register_user(db, UserCreate(
-                nome="Luca", cognome="Bianchi",
-                email="luca.bianchi@test.com", password="123456",
-                ruolo=UserRole.SEGRETERIA
-            ))
-            register_user(db, UserCreate(
-                nome="Giulia", cognome="Verdi",
-                email="giulia.verdi@test.com", password="123456",
-                ruolo=UserRole.MAGAZZINIERE
-            ))
-            print("✅ Utenti di test creati!")
+        create_test_user_if_not_exists(db, "Lorenzo", "Califano", "s1114896@studenti.univpm.it", "123456", UserRole.RESPONSABILE)
+        create_test_user_if_not_exists(db, "Chiara", "Carlomagno", "s1115047@studenti.univpm.it", "123456",UserRole.RESPONSABILE)
+        create_test_user_if_not_exists(db, "Sabrina", "Ferretti", "s1115906@studenti.univpm.it", "123456",UserRole.RESPONSABILE)
+        create_test_user_if_not_exists(db, "Mario", "Rossi", "mario.rossi@test.com", "123456", UserRole.RESPONSABILE)
+        create_test_user_if_not_exists(db, "Luca", "Bianchi", "luca.bianchi@test.com", "123456", UserRole.SEGRETERIA)
+        create_test_user_if_not_exists(db, "Giulia", "Verdi", "giulia.verdi@test.com", "123456", UserRole.MAGAZZINIERE)
     finally:
         db.close()
 
-    # === GESTIONE ROUTING ===
-    # noinspection PyUnreachableCode
-
+    # gestione route
     def route_change(e):
         # puliamo tutte le viste prima di caricare la nuova
         page.views.clear()
@@ -97,8 +103,23 @@ def main(page: ft.Page):
 
         page.update()
 
+    # Assegniamo la funzione di cambio route
     page.on_route_change = route_change
     page.go(page.route or "/")
 
-# === AVVIO APP ===
-ft.app(target=main)
+
+# avvio app
+if os.getenv("DOCKER") == "1":
+    # Modalità Web per Docker (permette di usare da browser)
+    ft.app(
+        target=main,
+        view=ft.AppView.WEB_BROWSER,
+        port=8550,
+        host="0.0.0.0"
+    )
+else:
+    # Modalità nativa per l'eseguibile e avvio manuale
+    ft.app(
+        target=main,
+        view=ft.AppView.FLET_APP
+    )

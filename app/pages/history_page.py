@@ -10,6 +10,14 @@ def history_page(page: ft.Page):
     page.theme = ft.Theme(font_family="Montserrat")
     page.update()
 
+    if page.session.get("user_name") == "Utente" or page.session.get("user_role") == "N/A":
+        return ft.View(
+            route="/history",
+            bgcolor="#f5f5f5",
+            controls=[ft.Row([ft.Text("Utente non autorizzato", size=22, color="red", weight=ft.FontWeight.BOLD)],
+                             alignment=ft.MainAxisAlignment.CENTER)]
+        )
+
     # prendo tutto subito
     db = SessionLocal()
     noleggi = get_all_rentals(db)

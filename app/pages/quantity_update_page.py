@@ -1,6 +1,6 @@
 import flet as ft
 from app.models.database import SessionLocal
-from app.services.product_service import get_product_by_id, update_quantity
+from app.services.product_service import get_product_by_id, update_product_quantity
 from app.utils.menu_builder import build_menu
 
 def quantity_update_page(page: ft.Page):
