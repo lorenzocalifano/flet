@@ -1,4 +1,3 @@
-import os
 import flet as ft
 import plotly.graph_objects as go
 from flet.plotly_chart import PlotlyChart
@@ -12,18 +11,16 @@ from collections import Counter
 from datetime import datetime
 
 def dashboard_page(page: ft.Page):
-    page.theme = ft.Theme(font_family="Montserrat")
-    page.update()
-
+    # Controllo Autenticazione Utente
     if page.session.get("user_name") == "Utente" or page.session.get("user_role") == "N/A":
         return ft.View(
-            route=page.route,
+            route="/dashboard",
             controls=[
                 ft.Row([
                     build_menu(page),
                     ft.Container(
                         content=ft.Text(
-                            "⛔ Utente non autorizzato",
+                            "Utente Non Autorizzato",
                             size=22,
                             color=ft.Colors.RED,
                             weight=ft.FontWeight.BOLD
@@ -36,18 +33,23 @@ def dashboard_page(page: ft.Page):
             ]
         )
 
-    # Dati DB
+    # Impostazioni Tema
+    page.theme = ft.Theme(font_family="Montserrat")
+    page.update()
+
+    # Recupero Dati Dal Database
     db = SessionLocal()
     noleggi = get_all_rentals(db)
     vendite = get_all_sales(db)
     notifiche_non_lette = len(get_unread_notifications(db))
     db.close()
 
+    # Calcolo Dati Del Mese Corrente
     mese_corrente = datetime.now().month
     noleggi_mese = len([n for n in noleggi if n.data_inizio.month == mese_corrente])
     vendite_mese = len([v for v in vendite if v.data_vendita.month == mese_corrente])
 
-    # Statistiche
+    # Funzione Per Creare Box Statistici
     def stat_box(titolo, valore, colore):
         return ft.Container(
             content=ft.Column([
@@ -63,43 +65,14 @@ def dashboard_page(page: ft.Page):
             expand=True
         )
 
+    # Riquadri Con Statistiche Principali
     stats_row = ft.Row([
-        stat_box("Noleggi mese", noleggi_mese, ft.Colors.BLUE),
-        stat_box("Vendite mese", vendite_mese, ft.Colors.GREEN),
-        stat_box("Notifiche non lette", notifiche_non_lette, ft.Colors.RED)
+        stat_box("Noleggi Mese", noleggi_mese, ft.Colors.BLUE),
+        stat_box("Vendite Mese", vendite_mese, ft.Colors.GREEN),
+        stat_box("Notifiche Non Lette", notifiche_non_lette, ft.Colors.RED)
     ], spacing=15, expand=True)
 
-    # Su docker SOLO BOX
-    if os.getenv("DOCKER") == "1":
-        content = ft.Column([
-            build_header(page, "Dashboard"),
-            stats_row
-        ], spacing=25, expand=True)
-
-        return ft.View(
-            route="/dashboard",
-            bgcolor="#f5f5f5",
-            controls=[
-                ft.Row([
-                    build_menu(page),
-                    ft.Container(
-                        content=content,
-                        expand=True,
-                        bgcolor=ft.Colors.WHITE,
-                        padding=30,
-                        border_radius=15,
-                        shadow=ft.BoxShadow(
-                            spread_radius=1,
-                            blur_radius=8,
-                            color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK)
-                        )
-                    )
-                ], expand=True)
-            ]
-        )
-
-    # Se non siamo su docker: GRAFICI
-    # --- Andamento Mensile ---
+    # Creazione Grafico Andamento Mensile
     mesi_noleggi = {}
     mesi_vendite = {}
     for n in noleggi:
@@ -109,8 +82,7 @@ def dashboard_page(page: ft.Page):
         m = v.data_vendita.strftime("%b")
         mesi_vendite[m] = mesi_vendite.get(m, 0) + 1
 
-    mesi = sorted(set(mesi_noleggi.keys()) | set(mesi_vendite.keys()),
-                  key=lambda x: datetime.strptime(x, "%b").month)
+    mesi = sorted(set(mesi_noleggi.keys()) | set(mesi_vendite.keys()), key=lambda x: datetime.strptime(x, "%b").month)
 
     andamento_fig = go.Figure()
     andamento_fig.add_trace(go.Scatter(
@@ -128,14 +100,17 @@ def dashboard_page(page: ft.Page):
         line=dict(color="green")
     ))
     andamento_fig.update_layout(
-        title=dict(text="Andamento Mensile",
-                   font=dict(family="Montserrat", size=22, color="black"), x=0.5),
+        title=dict(
+            text="Andamento Mensile",
+            font=dict(family="Montserrat", size=22, color="black"),
+            x=0.5
+        ),
         margin=dict(l=0, r=0, t=40, b=0),
         plot_bgcolor="white"
     )
     andamento_chart = PlotlyChart(andamento_fig, expand=True)
 
-    # --- Top Prodotti ---
+    # Creazione Grafico Top Prodotti Noleggiati
     prodotti_noleggiati = Counter([n.prodotto_id for n in noleggi])
     top_prodotti = prodotti_noleggiati.most_common(5)
     if top_prodotti:
@@ -152,8 +127,11 @@ def dashboard_page(page: ft.Page):
         name="Top Noleggi"
     ))
     top_fig.update_layout(
-        title=dict(text="Top 5 Prodotti Noleggiati",
-                   font=dict(family="Montserrat", size=22, color="black"), x=0.5),
+        title=dict(
+            text="Top 5 Prodotti Noleggiati",
+            font=dict(family="Montserrat", size=22, color="black"),
+            x=0.5
+        ),
         margin=dict(l=0, r=0, t=40, b=0),
         plot_bgcolor="white"
     )
@@ -161,6 +139,7 @@ def dashboard_page(page: ft.Page):
 
     grafici_row = ft.Row([andamento_chart, top_chart], spacing=15, expand=True)
 
+    # Composizione Contenuto Pagina
     content = ft.Column([
         build_header(page, "Dashboard"),
         stats_row,

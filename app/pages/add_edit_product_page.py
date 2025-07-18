@@ -5,19 +5,16 @@ from app.schemas.product_schema import ProductCreate
 from app.utils.menu_builder import build_menu
 
 def add_edit_product_page(page: ft.Page):
-    # solito font, manteniamo coerenza ovunque
-    page.theme = ft.Theme(font_family="Montserrat")
-    page.update()
-
+    # Controllo Autenticazione Utente
     if page.session.get("user_name") == "Utente" or page.session.get("user_role") == "N/A":
         return ft.View(
-            route=page.route,
+            route="/add_edit_product",
             controls=[
                 ft.Row([
                     build_menu(page),
                     ft.Container(
                         content=ft.Text(
-                            "⛔ Utente non autorizzato",
+                            "Utente Non Autorizzato",
                             size=22,
                             color=ft.Colors.RED,
                             weight=ft.FontWeight.BOLD
@@ -30,26 +27,26 @@ def add_edit_product_page(page: ft.Page):
             ]
         )
 
-    # solo responsabile e magazziniere possono aggiungere/modificare prodotti
-    if page.session.get("user_role") not in ["RESPONSABILE", "MAGAZZINIERE"]:
-        page.go("/dashboard")
-        return
+    # Impostazione Tema Grafico
+    page.theme = ft.Theme(font_family="Montserrat")
+    page.update()
 
-    # recupero product_id se passato, serve per capire se stiamo modificando o aggiungendo
-    try:
-        product_id = page.query.get("product_id")
-    except:
-        product_id = None
+    # Recupero Sicuro Product Id Dalla Route
+    product_id = None
+    if "product_id=" in page.route:
+        try:
+            product_id = int(page.route.split("product_id=")[1])
+        except:
+            product_id = None
 
-    # se stiamo modificando, recuperiamo il prodotto dal db
+    # Caricamento Prodotto Se In Modalità Modifica
     prodotto = None
     if product_id:
         db = SessionLocal()
-        prodotto = get_product_by_id(db, int(product_id))
+        prodotto = get_product_by_id(db, product_id)
         db.close()
 
-    # === CAMPI FORM ===
-    # se esiste un prodotto, precompiliamo i campi con i suoi valori
+    # Campi Del Form
     nome_field = ft.TextField(label="Nome", value=prodotto.nome if prodotto else "", width=300)
     categoria_field = ft.TextField(label="Categoria", value=prodotto.categoria if prodotto else "", width=300)
     quantita_field = ft.TextField(
@@ -58,29 +55,15 @@ def add_edit_product_page(page: ft.Page):
         width=300,
         keyboard_type=ft.KeyboardType.NUMBER
     )
-    modello_field = ft.TextField(
-        label="Modello",
-        value=prodotto.modello if prodotto and prodotto.modello else "",
-        width=300
-    )
-    dimensione_field = ft.TextField(
-        label="Dimensione",
-        value=prodotto.dimensione if prodotto and prodotto.dimensione else "",
-        width=300
-    )
-    brand_field = ft.TextField(
-        label="Brand",
-        value=prodotto.brand if prodotto and prodotto.brand else "",
-        width=300
-    )
-
+    modello_field = ft.TextField(label="Modello", value=prodotto.modello or "" if prodotto else "", width=300)
+    dimensione_field = ft.TextField(label="Dimensione", value=prodotto.dimensione or "" if prodotto else "", width=300)
+    brand_field = ft.TextField(label="Brand", value=prodotto.brand or "" if prodotto else "", width=300)
     message_text = ft.Text("", size=16, color="green")
 
-    # === FUNZIONE DI SALVATAGGIO ===
+    # Funzione Per Salvataggio
     def handle_save(e):
-        # controlli
         if not nome_field.value or not categoria_field.value or not quantita_field.value:
-            message_text.value = "⚠️ Nome, Categoria e Quantità sono obbligatori!"
+            message_text.value = "Nome, Categoria e Quantità Sono Obbligatori"
             message_text.color = "red"
             page.update()
             return
@@ -88,8 +71,8 @@ def add_edit_product_page(page: ft.Page):
         db = SessionLocal()
         try:
             if prodotto:
-                # siamo in modalità modifica: aggiorniamo il prodotto
-                prodotto_db = get_product_by_id(db, prodotto.id)  # TODO: forse inutile, ma meglio ricaricare da db
+                # Modalità Aggiornamento Prodotto
+                prodotto_db = get_product_by_id(db, prodotto.id)
                 if prodotto_db:
                     prodotto_db.nome = nome_field.value
                     prodotto_db.categoria = categoria_field.value
@@ -97,12 +80,11 @@ def add_edit_product_page(page: ft.Page):
                     prodotto_db.modello = modello_field.value or None
                     prodotto_db.dimensione = dimensione_field.value or None
                     prodotto_db.brand = brand_field.value or None
-
                     db.commit()
                     db.refresh(prodotto_db)
-                    message_text.value = f"✅ Prodotto '{prodotto_db.nome}' aggiornato!"
+                    message_text.value = f"Prodotto '{prodotto_db.nome}' Aggiornato Correttamente"
             else:
-                # modalità aggiunta: creiamo nuovo prodotto
+                # Modalità Aggiunta Nuovo Prodotto
                 nuovo = create_product(db, ProductCreate(
                     nome=nome_field.value,
                     categoria=categoria_field.value,
@@ -111,35 +93,30 @@ def add_edit_product_page(page: ft.Page):
                     dimensione=dimensione_field.value or None,
                     brand=brand_field.value or None
                 ))
-                message_text.value = f"✅ Prodotto '{nuovo.nome}' aggiunto!"
+                message_text.value = f"Prodotto '{nuovo.nome}' Aggiunto Correttamente"
 
             message_text.color = "green"
         except Exception as ex:
-            # TODO: gestire meglio errori (es. nome duplicato? categoria inesistente?)
-            message_text.value = f"❌ Errore: {str(ex)}"
+            message_text.value = f"Errore: {str(ex)}"
             message_text.color = "red"
         finally:
             db.close()
 
         page.update()
 
-    # === ASSEMBLA IL CONTENUTO ===
+    # Contenuto Pagina
     content = ft.Column([
-        ft.Text("Aggiungi / Modifica Prodotto", size=30, weight=ft.FontWeight.BOLD),
-        nome_field,
-        categoria_field,
-        quantita_field,
-        modello_field,
-        dimensione_field,
-        brand_field,
+        ft.Text("Aggiungi O Modifica Prodotto", size=30, weight=ft.FontWeight.BOLD),
+        nome_field, categoria_field, quantita_field,
+        modello_field, dimensione_field, brand_field,
         ft.ElevatedButton("Salva", on_click=handle_save, width=250),
         message_text,
-        ft.ElevatedButton("⬅ Torna al Catalogo", on_click=lambda e: page.go("/catalog"), width=250)
+        ft.ElevatedButton("Torna Al Catalogo", on_click=lambda e: page.go("/catalog"), width=250)
     ], spacing=15)
 
     return ft.View(
         route="/add_edit_product",
-        bgcolor="#1e90ff",  # sfondo coerente con le altre pagine gestionali
+        bgcolor="#f5f5f5",
         controls=[
             ft.Row([
                 build_menu(page),

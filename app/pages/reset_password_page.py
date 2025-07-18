@@ -18,6 +18,7 @@ def reset_password_page(page: ft.Page):
             message_text.value = "❌ Nessun utente trovato con questa email."
             message_text.color = "red"
         else:
+            # Logica temporanea senza collegare il programma ad un servizio di invio mail a pagamento
             nuova_password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
             utente.password = hash_password(nuova_password)
             db.commit()

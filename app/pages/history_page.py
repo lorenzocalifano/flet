@@ -6,19 +6,16 @@ from app.utils.menu_builder import build_menu
 from app.utils.header_builder import build_header
 
 def history_page(page: ft.Page):
-    # imposto il tema unico, per ora lasciamo sempre Montserrat
-    page.theme = ft.Theme(font_family="Montserrat")
-    page.update()
-
+    # Controllo Autenticazione Utente
     if page.session.get("user_name") == "Utente" or page.session.get("user_role") == "N/A":
         return ft.View(
-            route=page.route,
+            route="/history",
             controls=[
                 ft.Row([
                     build_menu(page),
                     ft.Container(
                         content=ft.Text(
-                            "⛔ Utente non autorizzato",
+                            "Utente Non Autorizzato",
                             size=22,
                             color=ft.Colors.RED,
                             weight=ft.FontWeight.BOLD
@@ -31,115 +28,119 @@ def history_page(page: ft.Page):
             ]
         )
 
-    # prendo tutto subito
+    # Impostazione Tema Grafico
+    page.theme = ft.Theme(font_family="Montserrat")
+    page.update()
+
+    # Connessione Al Database
     db = SessionLocal()
-    noleggi = get_all_rentals(db)
-    vendite = get_all_sales(db)
+    rentals = get_all_rentals(db)
+    sales = get_all_sales(db)
     db.close()
 
-    # === FILTRI IN ALTO ===
-    # dropdown per scegliere tipo operazione, tanto mettiamo solo Noleggi e Vendite
-    tipo_operazione = ft.Dropdown(
-        label="Tipo Operazione",
+    # Dropdown Filtri
+    filtro_tipo = ft.Dropdown(
+        label="Visualizza",
         options=[
             ft.dropdown.Option("Noleggi"),
             ft.dropdown.Option("Vendite")
         ],
-        value="Noleggi",  # di default mostriamo i noleggi
+        value="Noleggi",
         width=200
     )
-
-    # ordina per data, utile se ci sono tanti record
-    ordine_data = ft.Dropdown(
-        label="Ordina per data",
+    filtro_ordinamento = ft.Dropdown(
+        label="Ordina Per",
         options=[
-            ft.dropdown.Option("Più recenti prima"),
-            ft.dropdown.Option("Meno recenti prima")
+            ft.dropdown.Option("Più Recenti"),
+            ft.dropdown.Option("Meno Recenti")
         ],
-        value="Più recenti prima",
+        value="Più Recenti",
         width=200
     )
+    ricerca_cliente = ft.TextField(label="Cerca Cliente", width=250)
 
-    # ricerca per cliente, abbastanza basic ma fa il suo lavoro
-    ricerca_cliente = ft.TextField(label="Cerca per cliente", width=250)
-
-    # colonna con le operazioni (scrollabile perché se sono tante non vogliamo bloccarci)
-    operazioni_column = ft.Column(
-        spacing=10,
+    # Contenitore Principale Delle Card
+    storico_column = ft.Column(
+        spacing=15,
         scroll=ft.ScrollMode.AUTO,
         expand=True,
-        alignment=ft.MainAxisAlignment.START,
-        horizontal_alignment=ft.CrossAxisAlignment.STRETCH  # full width, più bello
+        horizontal_alignment=ft.CrossAxisAlignment.STRETCH
     )
 
-    # helper per creare una "card" singola di storico
-    def build_card(colore, dettagli):
+    # Funzione Per Creare Card
+    def build_card(titolo: str, dettagli: list[str], colore: str):
         return ft.Container(
-            content=ft.Column(dettagli, spacing=5),
+            content=ft.Column([
+                ft.Text(titolo, size=16, weight=ft.FontWeight.BOLD, color=colore),
+                *[ft.Text(d, size=14) for d in dettagli]
+            ], spacing=5),
+            bgcolor=ft.Colors.with_opacity(0.05, colore),
             padding=15,
-            bgcolor=ft.Colors.with_opacity(0.08, colore),
-            border_radius=10,
+            border_radius=10
         )
 
-    # funzione che aggiorna dinamicamente la lista
+    # Refresh Lista
     def refresh_list(e=None):
-        operazioni_column.controls.clear()
+        storico_column.controls.clear()
 
-        if tipo_operazione.value == "Noleggi":
-            # ordino e filtro
-            operazioni = sorted(
-                noleggi,
-                key=lambda n: n.data_inizio,
-                reverse=True if ordine_data.value == "Più recenti prima" else False
+        tipo = filtro_tipo.value
+        ordinamento = filtro_ordinamento.value
+        ricerca = ricerca_cliente.value.lower() if ricerca_cliente.value else ""
+
+        elementi = rentals if tipo == "Noleggi" else sales
+
+        if tipo == "Noleggi":
+            elementi = sorted(
+                elementi,
+                key=lambda x: x.data_inizio,
+                reverse=(ordinamento == "Più Recenti")
             )
-            for n in operazioni:
-                if ricerca_cliente.value and ricerca_cliente.value.lower() not in n.cliente.lower():
-                    continue  # skip se non matcha la ricerca
-                operazioni_column.controls.append(
-                    build_card(ft.Colors.BLUE, [
-                        ft.Text("NOLEGGIO", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE),
-                        ft.Text(f"Cliente: {n.cliente}", size=14),
-                        ft.Text(f"Prodotto ID: {n.prodotto_id}", size=14),
-                        ft.Text(f"Quantità: {n.quantita}", size=14),
-                        ft.Text(f"Metodo pagamento: {n.metodo_pagamento}", size=14),
-                        ft.Text(f"Stato: {n.stato}", size=14),
-                        ft.Text(f"Periodo: {n.data_inizio} → {n.data_fine}", size=14)
-                    ])
-                )
         else:
-            operazioni = sorted(
-                vendite,
-                key=lambda v: v.data_vendita,
-                reverse=True if ordine_data.value == "Più recenti prima" else False
+            elementi = sorted(
+                elementi,
+                key=lambda x: x.data_vendita,
+                reverse=(ordinamento == "Più Recenti")
             )
-            for v in operazioni:
-                if ricerca_cliente.value and ricerca_cliente.value.lower() not in v.cliente.lower():
-                    continue
-                operazioni_column.controls.append(
-                    build_card(ft.Colors.GREEN, [
-                        ft.Text("VENDITA", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN),
-                        ft.Text(f"Cliente: {v.cliente}", size=14),
-                        ft.Text(f"Prodotto ID: {v.prodotto_id}", size=14),
-                        ft.Text(f"Quantità: {v.quantita}", size=14),
-                        ft.Text(f"Metodo pagamento: {v.metodo_pagamento}", size=14),
-                        ft.Text(f"Stato: {v.stato}", size=14),
-                        ft.Text(f"Data: {v.data_vendita}", size=14)
-                    ])
-                )
+
+        for elem in elementi:
+            cliente = elem.cliente.lower()
+            if ricerca and ricerca not in cliente:
+                continue
+
+            if tipo == "Noleggi":
+                dettagli = [
+                    f"Prodotto ID: {elem.prodotto_id}",
+                    f"Quantità: {elem.quantita}",
+                    f"Data Inizio: {elem.data_inizio.strftime('%Y-%m-%d')}",
+                    f"Data Fine: {elem.data_fine.strftime('%Y-%m-%d')}",
+                    f"Stato: {elem.stato}",
+                    f"Metodo Pagamento: {elem.metodo_pagamento}"
+                ]
+                card = build_card(f"Noleggio di {elem.cliente}", dettagli, ft.Colors.BLUE)
+            else:
+                dettagli = [
+                    f"Prodotto ID: {elem.prodotto_id}",
+                    f"Quantità: {elem.quantita}",
+                    f"Data Vendita: {elem.data_vendita.strftime('%Y-%m-%d')}",
+                    f"Stato: {elem.stato}",
+                    f"Metodo Pagamento: {elem.metodo_pagamento}"
+                ]
+                card = build_card(f"Vendita a {elem.cliente}", dettagli, ft.Colors.GREEN)
+
+            storico_column.controls.append(card)
+
         page.update()
 
-    # collego subito gli eventi per refresh dinamico (così filtra in tempo reale)
-    tipo_operazione.on_change = refresh_list
-    ordine_data.on_change = refresh_list
+    filtro_tipo.on_change = refresh_list
+    filtro_ordinamento.on_change = refresh_list
     ricerca_cliente.on_change = refresh_list
+    refresh_list()
 
-    refresh_list()  # inizializza subito la lista
-
-    # === ASSEMBLA IL CONTENUTO ===
+    # Contenuto Pagina
     content = ft.Column([
         build_header(page, "Storico Operazioni"),
-        ft.Row([tipo_operazione, ordine_data, ricerca_cliente], spacing=15),
-        operazioni_column
+        ft.Row([filtro_tipo, filtro_ordinamento, ricerca_cliente], spacing=10),
+        storico_column
     ], spacing=20, expand=True)
 
     return ft.View(
