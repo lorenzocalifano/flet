@@ -28,9 +28,19 @@ from app.schemas.user_schema import UserCreate, UserRole
 # Resetta e popola il database con dati fake
 from populate_database import populate
 
-if not os.path.exists("app.db"):
-    print("Primo avvio: creazione e popolamento database...")
-    populate()  # Funzione che esegue il popolamento
+Base.metadata.create_all(bind=engine)
+db = SessionLocal()
+
+try:
+    if db.query(User).count() == 0 and db.query(Product).count() == 0:
+        print("Primo avvio: popolamento database con dati fake...")
+        populate()
+    else:
+        print("Database già popolato, nessuna modifica.")
+finally:
+    db.close()
+
+# noinspection PyUnreachableCode
 
 def main(page: ft.Page):
     # Impostazioni Grafiche Globali

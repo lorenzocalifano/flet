@@ -68,7 +68,7 @@ def user_management_page(page: ft.Page):
     # Funzione per aggiungere un nuovo dipendente
     def handle_add(e):
         if not nome_field.value or not cognome_field.value or not email_field.value or not password_field.value or not ruolo_dropdown.value:
-            message_text.value = "Tutti i campi sono obbligatori!"
+            message_text.value = "Tutti i campi sono obbligatori."
             message_text.color = "red"
         else:
             db = SessionLocal()
@@ -83,7 +83,10 @@ def user_management_page(page: ft.Page):
                 message_text.value = f"Dipendente {nome_field.value} aggiunto con successo!"
                 message_text.color = "green"
                 refresh_list()
-            except Exception as ex:
+            except ValueError as ve:  # <-- intercettiamo l'errore già gestito dal service
+                message_text.value = str(ve)  # es: "Email già registrata"
+                message_text.color = "red"
+            except Exception as ex:  # <-- in caso di altri errori inattesi
                 message_text.value = f"Errore: {str(ex)}"
                 message_text.color = "red"
             finally:
