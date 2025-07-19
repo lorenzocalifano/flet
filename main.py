@@ -1,4 +1,5 @@
 import os
+import subprocess
 import flet as ft
 
 # Import Delle Pagine
@@ -15,35 +16,30 @@ from app.pages.damage_report_page import damage_report_page
 from app.pages.notifications_page import notifications_page
 from app.pages.notification_detail_page import notification_detail_page
 from app.pages.reset_password_page import reset_password_page
+from app.pages.rental_edit_page import rental_edit_page
 
-# Database E Modelli
+# Database e Modelli
 from app.models.database import Base, engine, SessionLocal
 from app.models.user import User
-from app.models import *
+from app.models.product import Product
 
-# Services E Schemas
-from app.services.auth_service import register_user
-from app.schemas.user_schema import UserCreate, UserRole
-
-# Resetta e popola il database con dati fake
-from populate_database import populate
-
+# Inizializzazione DB
 Base.metadata.create_all(bind=engine)
 db = SessionLocal()
 
 try:
+    # ✅ Controllo: Popola solo se DB vuoto
     if db.query(User).count() == 0 and db.query(Product).count() == 0:
         print("Primo avvio: popolamento database con dati fake...")
-        populate()
+        subprocess.run(["python", "populate_database.py"])
     else:
         print("Database già popolato, nessuna modifica.")
 finally:
     db.close()
 
 # noinspection PyUnreachableCode
-
 def main(page: ft.Page):
-    # Impostazioni Grafiche Globali
+    # Impostazioni grafiche globali
     page.title = "Gestionale Magazzino"
     page.theme_mode = "light"
     page.theme = ft.Theme(font_family="Montserrat")
@@ -51,36 +47,10 @@ def main(page: ft.Page):
     page.window_full_screen = False
     page.update()
 
-    # Creazione Database E Utenti Di Test
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
-    try:
-        if not db.query(User).first():
-            register_user(db, UserCreate(
-                nome="Mario", cognome="Rossi",
-                email="mario.rossi@test.com", password="123456",
-                ruolo=UserRole.RESPONSABILE
-            ))
-            register_user(db, UserCreate(
-                nome="Luca", cognome="Bianchi",
-                email="luca.bianchi@test.com", password="123456",
-                ruolo=UserRole.SEGRETERIA
-            ))
-            register_user(db, UserCreate(
-                nome="Giulia", cognome="Verdi",
-                email="giulia.verdi@test.com", password="123456",
-                ruolo=UserRole.MAGAZZINIERE
-            ))
-            print("Utenti di test creati con successo")
-    finally:
-        db.close()
-
-    # Gestione Routing Con Controllo Autenticazione
-    # noinspection PyUnreachableCode
+    # Routing con controllo autenticazione
     def route_change(e):
         page.views.clear()
 
-        # Controllo Autenticazione Per Le Pagine Protette
         protected_routes = [
             "/dashboard", "/catalog", "/history", "/user_management",
             "/damage_report", "/notifications", "/rental_sale",
@@ -88,6 +58,7 @@ def main(page: ft.Page):
             "/notification_detail"
         ]
 
+        # ✅ Controllo utente non loggato
         if any(page.route.startswith(r) for r in protected_routes):
             user_name = page.session.get("user_name")
             user_role = page.session.get("user_role")
@@ -95,7 +66,7 @@ def main(page: ft.Page):
                 page.go("/")
                 return
 
-        # Routing Normale
+        # Routing standard
         if page.route.startswith("/product_detail"):
             page.views.append(product_detail_page(page))
         elif page.route.startswith("/quantity_update"):
@@ -122,13 +93,15 @@ def main(page: ft.Page):
             page.views.append(rental_sale_page(page))
         elif page.route == "/reset_password":
             page.views.append(reset_password_page(page))
+        elif page.route.startswith("/rental_edit"):
+            page.views.append(rental_edit_page(page))
 
         page.update()
 
     page.on_route_change = route_change
     page.go(page.route or "/")
 
-# Avvio Applicazione
+# Avvio applicazione
 if os.getenv("DOCKER") == "1":
     ft.app(
         target=main,

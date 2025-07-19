@@ -11,7 +11,7 @@ def catalog_page(page: ft.Page):
     page.theme = ft.Theme(font_family="Montserrat")
     page.update()
 
-    # Recupera tutti i prodotti
+    # Recupera dati iniziali
     db = SessionLocal()
     try:
         prodotti = get_all_products(db)
@@ -20,24 +20,22 @@ def catalog_page(page: ft.Page):
     finally:
         db.close()
 
-    # Calcolo filtri unici
     categorie = sorted({p.categoria for p in prodotti if p.categoria})
     modelli = sorted({p.modello for p in prodotti if p.modello})
     dimensioni = sorted({p.dimensione for p in prodotti if p.dimensione})
     brands = sorted({p.brand for p in prodotti if p.brand})
 
-    # Filtri dropdown
     categoria_filter = ft.Dropdown(label="Categoria", options=[ft.dropdown.Option(c) for c in categorie], width=200)
     modello_filter = ft.Dropdown(label="Modello", options=[ft.dropdown.Option(m) for m in modelli], width=200)
     dimensione_filter = ft.Dropdown(label="Dimensione", options=[ft.dropdown.Option(d) for d in dimensioni], width=200)
     brand_filter = ft.Dropdown(label="Brand", options=[ft.dropdown.Option(b) for b in brands], width=200)
+    search_field = ft.TextField(label="Cerca prodotto per nome", width=250)
 
     product_list_column = ft.Column(spacing=10, scroll=ft.ScrollMode.AUTO, expand=True)
 
     def refresh_list(e=None):
         product_list_column.controls.clear()
 
-        # Nuova sessione per ogni refresh
         db = SessionLocal()
         try:
             prodotti_refreshed = get_all_products(db)
@@ -47,6 +45,7 @@ def catalog_page(page: ft.Page):
             db.close()
 
         for p in prodotti_refreshed:
+            # Filtri
             if categoria_filter.value and p.categoria != categoria_filter.value:
                 continue
             if modello_filter.value and p.modello != modello_filter.value:
@@ -55,13 +54,14 @@ def catalog_page(page: ft.Page):
                 continue
             if brand_filter.value and p.brand != brand_filter.value:
                 continue
+            if search_field.value and search_field.value.lower() not in p.nome.lower():
+                continue
 
-            # Calcoli logici corretti
+            # Calcoli logici robusti
             danneggiati = count_damages_for_product(SessionLocal(), p.id)
             venduti = sum(v.quantita for v in vendite_refreshed if v.prodotto_id == p.id)
             noleggiati = sum(n.quantita for n in noleggi_refreshed if n.prodotto_id == p.id and n.stato != "concluso")
 
-            # Totale massimo e disponibili
             quantita_massima = max(0, p.quantita - venduti)
             disponibili = max(0, quantita_massima - danneggiati - noleggiati)
 
@@ -93,10 +93,10 @@ def catalog_page(page: ft.Page):
 
     for f in [categoria_filter, modello_filter, dimensione_filter, brand_filter]:
         f.on_change = refresh_list
+    search_field.on_submit = refresh_list
 
     refresh_list()
 
-    # Floating Button visibile solo a magazziniere e responsabile
     floating_button = None
     if page.session.get("user_role") in ["RESPONSABILE", "MAGAZZINIERE"]:
         floating_button = ft.Container(
@@ -108,7 +108,7 @@ def catalog_page(page: ft.Page):
     content = ft.Stack([
         ft.Column([
             build_header(page, "Catalogo Prodotti"),
-            ft.Row([categoria_filter, modello_filter, dimensione_filter, brand_filter], spacing=10),
+            ft.Row([categoria_filter, modello_filter, dimensione_filter, brand_filter, search_field], spacing=10),
             product_list_column
         ], spacing=20, expand=True),
         floating_button if floating_button else ft.Container()

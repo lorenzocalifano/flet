@@ -29,12 +29,12 @@ def reset_password_page(page: ft.Page):
                 to_email=user.email,
                 subject="Reset Password - Gestionale Magazzino",
                 message=f"Ciao {user.nome},\n\nLa tua nuova password è: {new_password}\n"
-                        f"Ti consigliamo di cambiarla appena possibile.\n\nGestionale Magazzino"
+                        f"\n-- Gestionale Magazzino"
             )
-            message_text.value = "✅ Password resettata! Controlla la tua email."
+            message_text.value = "Password resettata! Controlla la tua email."
             message_text.color = "green"
         else:
-            message_text.value = "❌ Email non trovata!"
+            message_text.value = "Email non trovata!"
             message_text.color = "red"
 
         db.close()

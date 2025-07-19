@@ -1,34 +1,33 @@
 import unittest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from app.models.database import Base
-from app.models.user import UserRole
-from app.schemas.user_schema import UserCreate
-from app.services.user_service import create_user, update_user_role
+from app.models.database import SessionLocal, Base, engine
+from app.services.user_service import create_user, delete_user, get_all_users
+from app.schemas.user_schema import UserCreate, UserRole
 
 class TestUserService(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        engine = create_engine("sqlite:///:memory:")
-        Base.metadata.create_all(engine)
-        cls.Session = sessionmaker(bind=engine)
 
     def setUp(self):
-        self.db = self.Session()
+        Base.metadata.create_all(bind=engine)
+        self.db = SessionLocal()
+        self.db.query(get_all_users.__globals__['User']).delete()
+        self.db.commit()
 
     def tearDown(self):
         self.db.close()
 
-    def test_update_user_role(self):
+    def test_create_and_delete_user(self):
         user = create_user(self.db, UserCreate(
             nome="Mario",
-            cognome="Rossi",
-            email="test@test.com",
+            cognome="Bianchi",
+            email="mario.bianchi@test.com",
             password="123456",
             ruolo=UserRole.SEGRETERIA
         ))
-        updated_user = update_user_role(self.db, user.id, UserRole.MAGAZZINIERE)
-        self.assertEqual(updated_user.ruolo.value, UserRole.MAGAZZINIERE.value)
+        self.assertIsNotNone(user.id)
+        self.assertEqual(user.email, "mario.bianchi@test.com")
+
+        delete_user(self.db, user.id)
+        users = get_all_users(self.db)
+        self.assertEqual(len(users), 0)
 
 if __name__ == "__main__":
     unittest.main()
