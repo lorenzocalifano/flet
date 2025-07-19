@@ -58,6 +58,7 @@ def add_edit_product_page(page: ft.Page):
     modello_field = ft.TextField(label="Modello", value=prodotto.modello or "" if prodotto else "", width=300)
     dimensione_field = ft.TextField(label="Dimensione", value=prodotto.dimensione or "" if prodotto else "", width=300)
     brand_field = ft.TextField(label="Brand", value=prodotto.brand or "" if prodotto else "", width=300)
+    potenza_field = ft.TextField(label="Potenza (W)", value=str(prodotto.potenza) if prodotto and prodotto.potenza else "", width=300)
     message_text = ft.Text("", size=16, color="green")
 
     # Funzione Per Salvataggio
@@ -80,6 +81,7 @@ def add_edit_product_page(page: ft.Page):
                     prodotto_db.modello = modello_field.value or None
                     prodotto_db.dimensione = dimensione_field.value or None
                     prodotto_db.brand = brand_field.value or None
+                    prodotto_db.potenza = int(potenza_field.value) if potenza_field.value else None
                     db.commit()
                     db.refresh(prodotto_db)
                     message_text.value = f"Prodotto '{prodotto_db.nome}' Aggiornato Correttamente"

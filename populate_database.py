@@ -65,7 +65,8 @@ def populate():
             quantita=random.randint(5, 30),
             modello=random.choice(modelli),
             dimensione=random.choice(dimensioni),
-            brand=random.choice(brands)
+            brand=random.choice(brands),
+            potenza=random.randint(50, 2000)
         ))
         prodotti_creati.append(p)
 

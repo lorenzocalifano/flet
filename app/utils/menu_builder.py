@@ -20,7 +20,7 @@ def build_menu(page: ft.Page):
             border_radius=10
         )
 
-    # ✅ Conta notifiche non lette
+    # Conta notifiche non lette
     db = SessionLocal()
     unread = len(get_unread_notifications(db))
     db.close()
