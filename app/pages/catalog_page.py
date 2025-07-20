@@ -7,11 +7,11 @@ from app.services.sale_service import get_all_sales
 from app.utils.menu_builder import build_menu
 from app.utils.header_builder import build_header
 
+
 def catalog_page(page: ft.Page):
     page.theme = ft.Theme(font_family="Montserrat")
     page.update()
 
-    # Recupera tutti i prodotti e operazioni
     db = SessionLocal()
     try:
         prodotti = get_all_products(db)
@@ -20,14 +20,14 @@ def catalog_page(page: ft.Page):
     finally:
         db.close()
 
-    # Calcolo filtri unici
+    # Filtri unici
     categorie = sorted({p.categoria for p in prodotti if p.categoria})
     modelli = sorted({p.modello for p in prodotti if p.modello})
     dimensioni = sorted({p.dimensione for p in prodotti if p.dimensione})
     brands = sorted({p.brand for p in prodotti if p.brand})
     potenze = sorted({str(p.potenza) for p in prodotti if p.potenza})
 
-    # Filtri
+    # Filtri e ricerca
     categoria_filter = ft.Dropdown(label="Categoria", options=[ft.dropdown.Option(c) for c in categorie], width=200)
     modello_filter = ft.Dropdown(label="Modello", options=[ft.dropdown.Option(m) for m in modelli], width=200)
     dimensione_filter = ft.Dropdown(label="Dimensione", options=[ft.dropdown.Option(d) for d in dimensioni], width=200)
@@ -36,6 +36,14 @@ def catalog_page(page: ft.Page):
     search_field = ft.TextField(label="Cerca per nome", width=250)
 
     product_list_column = ft.Column(spacing=10, scroll=ft.ScrollMode.AUTO, expand=True)
+
+    def handle_delete(product_id):
+        db = SessionLocal()
+        try:
+            delete_product(db, product_id)
+        finally:
+            db.close()
+        refresh_list()
 
     def refresh_list(e=None):
         product_list_column.controls.clear()
@@ -49,7 +57,6 @@ def catalog_page(page: ft.Page):
             db.close()
 
         for p in prodotti_refreshed:
-            # Filtri
             if categoria_filter.value and p.categoria != categoria_filter.value:
                 continue
             if modello_filter.value and p.modello != modello_filter.value:
@@ -63,7 +70,7 @@ def catalog_page(page: ft.Page):
             if search_field.value and search_field.value.lower() not in p.nome.lower():
                 continue
 
-            # Calcoli logici
+            # Calcoli quantità
             danneggiati = count_damages_for_product(SessionLocal(), p.id)
             venduti = sum(v.quantita for v in vendite_refreshed if v.prodotto_id == p.id)
             noleggiati = sum(n.quantita for n in noleggi_refreshed if n.prodotto_id == p.id and n.stato != "concluso")
@@ -74,21 +81,22 @@ def catalog_page(page: ft.Page):
             stato = f"{disponibili}/{quantita_massima} disponibili (danneggiati: {danneggiati}, noleggiati: {noleggiati})"
             color = ft.Colors.WHITE if disponibili > 0 else ft.Colors.with_opacity(0.1, ft.Colors.RED)
 
-            # Bottone elimina visibile solo per ruoli specifici
-            elimina_btn = None
-            if page.session.get("user_role") in ["RESPONSABILE", "MAGAZZINIERE"]:
-                elimina_btn = ft.IconButton(
-                    icon=ft.Icons.DELETE,
-                    icon_color=ft.Colors.RED,
-                    tooltip="Elimina Prodotto",
-                    on_click=lambda e, pid=p.id: handle_delete(pid)
-                )
-
+            # Bottoni in base al ruolo
             buttons_row = [
-                ft.ElevatedButton("Dettagli", on_click=lambda e, pid=p.id: page.go(f"/product_detail?product_id={pid}"))
+                ft.ElevatedButton(
+                    "Dettagli",
+                    on_click=lambda e, pid=p.id: page.go(f"/product_detail?product_id={pid}")
+                )
             ]
-            if elimina_btn:
-                buttons_row.append(elimina_btn)
+            if page.session.get("user_role") in ["RESPONSABILE", "MAGAZZINIERE"]:
+                buttons_row.append(
+                    ft.IconButton(
+                        icon=ft.Icons.DELETE,
+                        icon_color=ft.Colors.RED,
+                        tooltip="Elimina Prodotto",
+                        on_click=lambda e, pid=p.id: handle_delete(pid)
+                    )
+                )
 
             product_list_column.controls.append(
                 ft.Container(
@@ -96,8 +104,10 @@ def catalog_page(page: ft.Page):
                         ft.Column([
                             ft.Text(f"{p.nome} ({p.categoria})", size=16, weight=ft.FontWeight.BOLD),
                             ft.Text(
-                                f"Modello: {p.modello or 'N/A'} | Dimensione: {p.dimensione or 'N/A'} | "
-                                f"Brand: {p.brand or 'N/A'} | Potenza: {p.potenza or 'N/A'} W",
+                                f"Modello: {p.modello or 'N/A'} | "
+                                f"Dimensione: {p.dimensione or 'N/A'} | "
+                                f"Brand: {p.brand or 'N/A'} | "
+                                f"Potenza: {p.potenza or 'N/A'} W",
                                 size=12, italic=True
                             ),
                             ft.Text(stato, size=14)
@@ -107,44 +117,45 @@ def catalog_page(page: ft.Page):
                     padding=10,
                     bgcolor=color,
                     border_radius=10,
-                    shadow=ft.BoxShadow(spread_radius=1, blur_radius=5,
-                                        color=ft.Colors.with_opacity(0.2, ft.Colors.BLACK))
+                    shadow=ft.BoxShadow(
+                        spread_radius=1,
+                        blur_radius=5,
+                        color=ft.Colors.with_opacity(0.2, ft.Colors.BLACK)
+                    )
                 )
             )
+
         page.update()
 
-    def handle_delete(product_id):
-        db = SessionLocal()
-        try:
-            delete_product(db, product_id)
-        finally:
-            db.close()
-        refresh_list()
-
+    # Eventi filtri
     for f in [categoria_filter, modello_filter, dimensione_filter, brand_filter, potenza_filter]:
         f.on_change = refresh_list
     search_field.on_change = refresh_list
 
     refresh_list()
 
-    # Floating Button
-    floating_button = None
-    if page.session.get("user_role") in ["RESPONSABILE", "MAGAZZINIERE"]:
-        floating_button = ft.Container(
-            content=ft.FloatingActionButton(icon=ft.Icons.ADD, bgcolor=ft.Colors.BLUE,
-                                            on_click=lambda e: page.go("/add_edit_product")),
-            right=30, bottom=30
+    # Floating Button visibile solo per ruoli specifici
+    floating_button = (
+        ft.FloatingActionButton(
+            icon=ft.Icons.ADD,
+            bgcolor=ft.Colors.BLUE,
+            on_click=lambda e: page.go("/add_edit_product")
         )
+        if page.session.get("user_role") in ["RESPONSABILE", "MAGAZZINIERE"]
+        else None
+    )
 
-    content = ft.Stack([
-        ft.Column([
-            build_header(page, "Catalogo Prodotti"),
-            ft.Row([categoria_filter, modello_filter, dimensione_filter, brand_filter, search_field, potenza_filter], spacing=10),
-            product_list_column
-        ], spacing=20, expand=True),
-        floating_button if floating_button else ft.Container()
-    ], expand=True)
+    # Struttura SENZA Stack per evitare overlay
+    main_content = ft.Column([
+        build_header(page, "Catalogo Prodotti"),
+        ft.Row([
+            categoria_filter, modello_filter, dimensione_filter,
+            brand_filter, potenza_filter, search_field
+        ], spacing=10),
+        product_list_column
+    ], spacing=20, expand=True)
 
+    # Ritorno vista
     return ft.View(
         route="/catalog",
         bgcolor="#f0f8ff",
@@ -152,13 +163,19 @@ def catalog_page(page: ft.Page):
             ft.Row([
                 build_menu(page),
                 ft.Container(
-                    content=content,
+                    content=ft.Column([
+                        main_content,
+                        floating_button if floating_button else ft.Container()
+                    ]),
                     expand=True,
                     bgcolor=ft.Colors.WHITE,
                     padding=30,
                     border_radius=15,
-                    shadow=ft.BoxShadow(spread_radius=1, blur_radius=8,
-                                        color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK))
+                    shadow=ft.BoxShadow(
+                        spread_radius=1,
+                        blur_radius=8,
+                        color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK)
+                    )
                 )
             ], expand=True)
         ]

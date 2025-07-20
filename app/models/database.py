@@ -1,23 +1,30 @@
-# Database connection
+import os
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
-# Database locale SQLite (file locale "app.db")
-DATABASE_URL = "sqlite:///gestione_magazzino.db"
-
-# Crea il motore di connessione
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-
-# Sessione per interagire con il DB
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# Base per i modelli ORM
 Base = declarative_base()
+SessionLocal = None
+engine = None
 
-# Funzione di utilità per ottenere la sessione
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+try:
+    # Percorso assoluto della directory del file corrente (funziona anche per eseguibili PyInstaller)
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+    # Percorso completo del database nella stessa cartella (o accanto all'eseguibile)
+    DB_PATH = os.path.join(BASE_DIR, "..", "gestionale_magazzino.db")
+
+    # Creazione engine SQLite
+    engine = create_engine(
+        f"sqlite:///{os.path.abspath(DB_PATH)}",
+        connect_args={"check_same_thread": False}
+    )
+
+    # Creazione sessione
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+    print(f"Database collegato correttamente: {os.path.abspath(DB_PATH)}")
+
+except Exception as e:
+    print(f"Errore durante la connessione al database: {e}")
+    # Qui potresti anche implementare un fallback o terminare l'applicazione in modo controllato

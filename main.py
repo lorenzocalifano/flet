@@ -17,6 +17,7 @@ from app.pages.notifications_page import notifications_page
 from app.pages.notification_detail_page import notification_detail_page
 from app.pages.reset_password_page import reset_password_page
 from app.pages.rental_edit_page import rental_edit_page
+from populate_database import populate
 
 # Database e Modelli
 from app.models.database import Base, engine, SessionLocal
@@ -28,10 +29,10 @@ Base.metadata.create_all(bind=engine)
 db = SessionLocal()
 
 try:
-    # ✅ Controllo: Popola solo se DB vuoto
+    # Controllo: Popola solo se DB vuoto
     if db.query(User).count() == 0 and db.query(Product).count() == 0:
         print("Primo avvio: popolamento database con dati fake...")
-        subprocess.run(["python", "populate_database.py"])
+        populate()
     else:
         print("Database già popolato, nessuna modifica.")
 finally:
@@ -58,15 +59,15 @@ def main(page: ft.Page):
             "/notification_detail"
         ]
 
-        # ✅ Controllo utente non loggato
+        # Controllo autenticazione corretto
+        user_name = page.session.get("user_name")
+        user_role = page.session.get("user_role")
         if any(page.route.startswith(r) for r in protected_routes):
-            user_name = page.session.get("user_name")
-            user_role = page.session.get("user_role")
             if not user_name or not user_role or user_name == "Utente" or user_role == "N/A":
                 page.go("/")
                 return
 
-        # Routing standard
+        # Routing normale
         if page.route.startswith("/product_detail"):
             page.views.append(product_detail_page(page))
         elif page.route.startswith("/quantity_update"):
@@ -93,8 +94,6 @@ def main(page: ft.Page):
             page.views.append(rental_sale_page(page))
         elif page.route == "/reset_password":
             page.views.append(reset_password_page(page))
-        elif page.route.startswith("/rental_edit"):
-            page.views.append(rental_edit_page(page))
 
         page.update()
 
