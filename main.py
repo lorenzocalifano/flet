@@ -2,6 +2,18 @@ import os
 import subprocess
 import flet as ft
 
+# Percorso standard per il database su macOS
+BASE_DIR = os.path.expanduser("~/Library/Application Support/Gestionale_Magazzino")
+DB_PATH = os.path.join(BASE_DIR, "gestionale_magazzino.db")
+
+# Crea la cartella se non esiste
+if not os.path.exists(BASE_DIR):
+    os.makedirs(BASE_DIR, exist_ok=True)
+
+# Passa il percorso al database.py
+os.environ["DB_PATH"] = DB_PATH
+print(f"Database collegato correttamente: {DB_PATH}")
+
 # Import Delle Pagine
 from app.pages.login_page import login_page
 from app.pages.dashboard_page import dashboard_page
@@ -24,12 +36,10 @@ from app.models.database import Base, engine, SessionLocal
 from app.models.user import User
 from app.models.product import Product
 
-# Inizializzazione DB
+# Controllo iniziale database
 Base.metadata.create_all(bind=engine)
 db = SessionLocal()
-
 try:
-    # Controllo: Popola solo se DB vuoto
     if db.query(User).count() == 0 and db.query(Product).count() == 0:
         print("Primo avvio: popolamento database con dati fake...")
         populate()
@@ -102,14 +112,6 @@ def main(page: ft.Page):
 
 # Avvio applicazione
 if os.getenv("DOCKER") == "1":
-    ft.app(
-        target=main,
-        view=ft.AppView.WEB_BROWSER,
-        port=8550,
-        host="0.0.0.0"
-    )
+    ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8550, host="0.0.0.0")
 else:
-    ft.app(
-        target=main,
-        view=ft.AppView.FLET_APP
-    )
+    ft.app(target=main, view=ft.AppView.FLET_APP)
