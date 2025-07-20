@@ -1,8 +1,8 @@
 import random
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta
 from faker import Faker
 from sqlalchemy import text
-from app.models.database import SessionLocal, Base, engine
+from app.models.database_model import SessionLocal, Base, engine
 from app.services.auth_service import register_user
 from app.schemas.user_schema import UserCreate, UserRole
 from app.services.product_service import create_product
@@ -14,8 +14,12 @@ from app.schemas.product_schema import ProductCreate
 from app.schemas.rental_schema import RentalCreate
 from app.schemas.sale_schema import SaleCreate
 from app.schemas.damage_schema import DamageCreate
+from app.services.rental_service import get_all_rentals
+from app.services.sale_service import get_all_sales
+from app.services.damage_service import count_damages_for_product
 
 fake = Faker("it_IT")
+
 
 def populate():
     """Popola il database con dati fittizi per i test"""
@@ -55,36 +59,40 @@ def populate():
     brands = ["Yamaha", "Sony", "Behringer", "JBL", "Roland"]
 
     prodotti_creati = []
-    tentativi = 0
-    while len(prodotti_creati) < 50 and tentativi < 100:
-        tentativi += 1
-        try:
-            p = create_product(db, ProductCreate(
-                nome=fake.unique.word().capitalize(),  # unique per ridurre collisioni
-                categoria=random.choice(categorie),
-                quantita=random.randint(5, 30),
-                modello=random.choice(modelli),
-                dimensione=random.choice(dimensioni),
-                brand=random.choice(brands),
-                potenza=random.randint(50, 2000)
-            ))
-            prodotti_creati.append(p)
-        except ValueError as e:
-            # Nome duplicato, rigenera
-            continue
+    nomi_usati = set()
+
+    for _ in range(50):
+        nome = fake.word().capitalize()
+        while nome in nomi_usati:  # Evita duplicati
+            nome = fake.word().capitalize()
+        nomi_usati.add(nome)
+
+        p = create_product(db, ProductCreate(
+            nome=nome,
+            categoria=random.choice(categorie),
+            quantita=random.randint(5, 30),
+            modello=random.choice(modelli),
+            dimensione=random.choice(dimensioni),
+            brand=random.choice(brands),
+            potenza=random.randint(50, 500)
+        ))
+        prodotti_creati.append(p)
 
     print("Creazione noleggi...")
-    mese_corrente = datetime.now().month
-    for i in range(30):
+    for _ in range(30):
         prodotto = random.choice(prodotti_creati)
-        quantita = random.randint(1, min(5, prodotto.quantita))
 
-        # 50% dei noleggi nel mese corrente
-        if i < 15:
-            start_date = date(datetime.now().year, mese_corrente, random.randint(1, min(28, datetime.now().day)))
-        else:
-            start_date = fake.date_this_year()
+        # Calcolo disponibili reali
+        vendite_esistenti = sum(s.quantita for s in get_all_sales(db) if s.prodotto_id == prodotto.id)
+        noleggi_esistenti = sum(r.quantita for r in get_all_rentals(db) if r.prodotto_id == prodotto.id and r.stato != "concluso")
+        danneggiati = count_damages_for_product(db, prodotto.id)
+        disponibili = max(0, prodotto.quantita - vendite_esistenti - noleggi_esistenti - danneggiati)
 
+        if disponibili <= 0:
+            continue
+
+        quantita = random.randint(1, min(5, disponibili))
+        start_date = fake.date_this_year()
         end_date = start_date + timedelta(days=random.randint(1, 10))
         cliente = fake.name()
         metodo = random.choice(["contanti", "paypal", "carta di credito"])
@@ -103,28 +111,26 @@ def populate():
     for _ in range(20):
         prodotto = random.choice(prodotti_creati)
 
-        # Calcola disponibilità reale del prodotto
-        danneggiati = random.randint(0, min(2, prodotto.quantita))  # simulazione danni eventuali
-        disponibili = max(0, prodotto.quantita - danneggiati)
+        vendite_esistenti = sum(s.quantita for s in get_all_sales(db) if s.prodotto_id == prodotto.id)
+        noleggi_esistenti = sum(r.quantita for r in get_all_rentals(db) if r.prodotto_id == prodotto.id and r.stato != "concluso")
+        danneggiati = count_damages_for_product(db, prodotto.id)
+        disponibili = max(0, prodotto.quantita - vendite_esistenti - noleggi_esistenti - danneggiati)
 
         if disponibili <= 0:
-            continue  # salta questo prodotto se non ci sono pezzi disponibili
+            continue
 
-        quantita = random.randint(1, disponibili)
+        quantita = random.randint(1, min(3, disponibili))
         cliente = fake.name()
         metodo = random.choice(["contanti", "paypal", "carta di credito"])
 
-        try:
-            create_sale(db, SaleCreate(
-                prodotto_id=prodotto.id,
-                quantita=quantita,
-                cliente=cliente,
-                data_vendita=fake.date_this_year(),
-                stato=random.choice(["confermato", "annullato"]),
-                metodo_pagamento=metodo
-            ))
-        except Exception as e:
-            print(f"Errore nella creazione vendita per {prodotto.nome}: {e}")
+        create_sale(db, SaleCreate(
+            prodotto_id=prodotto.id,
+            quantita=quantita,
+            cliente=cliente,
+            data_vendita=fake.date_this_year(),
+            stato=random.choice(["confermato", "annullato"]),
+            metodo_pagamento=metodo
+        ))
 
     print("Segnalazione danni...")
     for _ in range(10):
@@ -146,6 +152,7 @@ def populate():
 
     db.close()
     print("Database popolato con successo!")
+
 
 if __name__ == "__main__":
     populate()

@@ -68,11 +68,23 @@ def rental_edit_page(page: ft.Page):
             nuovo_metodo = metodo_field.value
 
             db = SessionLocal()
-            update_rental(db, noleggio.id, quantita=nuova_quantita, data_fine=nuova_data_fine, metodo_pagamento=nuovo_metodo)
-            db.close()
-
-            message_text.value = "Noleggio aggiornato con successo"
-            message_text.color = "green"
+            try:
+                # Controllo disponibilità direttamente dal service
+                update_rental(
+                    db,
+                    noleggio.id,
+                    quantita=nuova_quantita,
+                    data_fine=nuova_data_fine,
+                    metodo_pagamento=nuovo_metodo
+                )
+                message_text.value = "Noleggio aggiornato con successo"
+                message_text.color = "green"
+            except ValueError as ve:
+                # Errore se supera i disponibili
+                message_text.value = str(ve)
+                message_text.color = "red"
+            finally:
+                db.close()
         except Exception as ex:
             message_text.value = f"Errore: {str(ex)}"
             message_text.color = "red"

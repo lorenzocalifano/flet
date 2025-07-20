@@ -102,6 +102,8 @@ def main(page: ft.Page):
             page.views.append(notifications_page(page))
         elif page.route == "/rental_sale":
             page.views.append(rental_sale_page(page))
+        elif page.route.startswith("/rental_edit"):
+            page.views.append(rental_edit_page(page))
         elif page.route == "/reset_password":
             page.views.append(reset_password_page(page))
 
