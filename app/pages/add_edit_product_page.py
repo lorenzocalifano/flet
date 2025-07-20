@@ -1,6 +1,6 @@
 import flet as ft
 from app.models.database import SessionLocal
-from app.services.product_service import create_product, get_product_by_id
+from app.services.product_service import create_product, get_product_by_id, update_product_details
 from app.schemas.product_schema import ProductCreate
 from app.utils.menu_builder import build_menu
 
@@ -31,7 +31,7 @@ def add_edit_product_page(page: ft.Page):
     page.theme = ft.Theme(font_family="Montserrat")
     page.update()
 
-    # Recupero Sicuro Product Id Dalla Route
+    # Recupero Product Id Dalla Route
     product_id = None
     if "product_id=" in page.route:
         try:
@@ -70,21 +70,26 @@ def add_edit_product_page(page: ft.Page):
             return
 
         db = SessionLocal()
+
         try:
             if prodotto:
-                # Modalità Aggiornamento Prodotto
                 prodotto_db = get_product_by_id(db, prodotto.id)
                 if prodotto_db:
+                    nuova_quantita = int(quantita_field.value)
+                    if nuova_quantita < 0:
+                        raise ValueError("La quantità non può essere negativa")
+
+                    prodotto_db.quantita = nuova_quantita
                     prodotto_db.nome = nome_field.value
                     prodotto_db.categoria = categoria_field.value
-                    prodotto_db.quantita = int(quantita_field.value)
                     prodotto_db.modello = modello_field.value or None
                     prodotto_db.dimensione = dimensione_field.value or None
                     prodotto_db.brand = brand_field.value or None
                     prodotto_db.potenza = int(potenza_field.value) if potenza_field.value else None
+
                     db.commit()
                     db.refresh(prodotto_db)
-                    message_text.value = f"Prodotto '{prodotto_db.nome}' Aggiornato Correttamente"
+                    message_text.value = f"Prodotto '{prodotto_db.nome}' aggiornato correttamente"
             else:
                 # Modalità Aggiunta Nuovo Prodotto
                 nuovo = create_product(db, ProductCreate(
@@ -93,11 +98,15 @@ def add_edit_product_page(page: ft.Page):
                     quantita=int(quantita_field.value),
                     modello=modello_field.value or None,
                     dimensione=dimensione_field.value or None,
-                    brand=brand_field.value or None
+                    brand=brand_field.value or None,
+                    potenza=int(potenza_field.value) if potenza_field.value else None
                 ))
                 message_text.value = f"Prodotto '{nuovo.nome}' Aggiunto Correttamente"
 
             message_text.color = "green"
+        except ValueError as ve:
+            message_text.value = str(ve)
+            message_text.color = "red"
         except Exception as ex:
             message_text.value = f"Errore: {str(ex)}"
             message_text.color = "red"
@@ -110,7 +119,7 @@ def add_edit_product_page(page: ft.Page):
     content = ft.Column([
         ft.Text("Aggiungi O Modifica Prodotto", size=30, weight=ft.FontWeight.BOLD),
         nome_field, categoria_field, quantita_field,
-        modello_field, dimensione_field, brand_field,
+        modello_field, dimensione_field, brand_field, potenza_field,
         ft.ElevatedButton("Salva", on_click=handle_save, width=250),
         message_text,
         ft.ElevatedButton("Torna Al Catalogo", on_click=lambda e: page.go("/catalog"), width=250)

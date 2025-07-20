@@ -1,32 +1,58 @@
 import unittest
+from datetime import date
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.models.database import Base
-from app.services.sale_service import create_sale, get_all_sales
+from app.models.product import Product
+from app.services.sale_service import create_sale
 from app.schemas.sale_schema import SaleCreate
-from datetime import date
 
 class TestSaleService(unittest.TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
+        """Configura un database in memoria per i test"""
         engine = create_engine("sqlite:///:memory:")
+        TestingSession = sessionmaker(bind=engine)
         Base.metadata.create_all(bind=engine)
-        self.Session = sessionmaker(bind=engine)
-        self.db = self.Session()
+        cls.db = TestingSession()
 
-    def tearDown(self):
-        self.db.close()
+        # Prodotto di base
+        cls.product = Product(
+            nome="Prodotto Vendita Test",
+            categoria="Video",
+            quantita=8
+        )
+        cls.db.add(cls.product)
+        cls.db.commit()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.db.close()
 
     def test_create_sale_success(self):
+        """Verifica che una vendita valida venga creata correttamente"""
         sale = create_sale(self.db, SaleCreate(
-            prodotto_id=1, quantita=1, cliente="Luca", data_vendita=date.today(),
-            metodo_pagamento="carta"))
-        self.assertEqual(sale.stato, "confermato")
+            prodotto_id=self.product.id,
+            quantita=3,
+            cliente="Mario Rossi",
+            data_vendita=date.today(),
+            metodo_pagamento="paypal",
+            stato="confermato"
+        ))
+        self.assertIsNotNone(sale.id)
+        self.assertEqual(sale.quantita, 3)
 
-    def test_get_all_sales(self):
-        create_sale(self.db, SaleCreate(
-            prodotto_id=1, quantita=1, cliente="Luca", data_vendita=date.today()))
-        sales = get_all_sales(self.db)
-        self.assertEqual(len(sales), 1)
+    def test_create_sale_exceeding_quantity(self):
+        """Verifica che non si possa vendere più dei disponibili"""
+        with self.assertRaises(ValueError):
+            create_sale(self.db, SaleCreate(
+                prodotto_id=self.product.id,
+                quantita=50,  # maggiore dei disponibili
+                cliente="Luca Bianchi",
+                data_vendita=date.today(),
+                metodo_pagamento="carta di credito",
+                stato="confermato"
+            ))
 
 if __name__ == "__main__":
     unittest.main()

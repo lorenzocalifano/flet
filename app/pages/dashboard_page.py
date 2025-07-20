@@ -20,9 +20,19 @@ def dashboard_page(page: ft.Page):
     db.close()
 
     # Calcolo i dati del mese corrente
-    mese_corrente = datetime.now().month
-    noleggi_mese = len([n for n in noleggi if n.data_inizio.month == mese_corrente])
-    vendite_mese = len([v for v in vendite if v.data_vendita.month == mese_corrente])
+    oggi = datetime.now()
+    anno_corrente = oggi.year
+    mese_corrente = oggi.month
+
+    noleggi_mese = len([
+        n for n in noleggi
+        if n.data_inizio and n.data_inizio.month == mese_corrente and n.data_inizio.year == anno_corrente
+    ])
+
+    vendite_mese = len([
+        v for v in vendite
+        if v.data_vendita and v.data_vendita.month == mese_corrente and v.data_vendita.year == anno_corrente
+    ])
 
     # Funzione per creare i box di statistiche
     def stat_box(titolo, valore, colore):

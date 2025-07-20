@@ -15,6 +15,5 @@ def send_email(to_email: str, subject: str, message: str):
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
             server.login(GMAIL_USER, GMAIL_PASSWORD)
             server.sendmail(GMAIL_USER, to_email, msg.as_string())
-        print(f"Email inviata a {to_email}")
     except Exception as e:
         print(f"Errore invio email: {e}")

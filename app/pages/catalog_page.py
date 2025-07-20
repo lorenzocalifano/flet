@@ -71,7 +71,7 @@ def catalog_page(page: ft.Page):
                 continue
 
             # Calcoli quantità
-            danneggiati = count_damages_for_product(SessionLocal(), p.id)
+            danneggiati = count_damages_for_product(db, p.id)
             venduti = sum(v.quantita for v in vendite_refreshed if v.prodotto_id == p.id)
             noleggiati = sum(n.quantita for n in noleggi_refreshed if n.prodotto_id == p.id and n.stato != "concluso")
 
